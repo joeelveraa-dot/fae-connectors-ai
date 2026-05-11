@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identificador de Conectores — FAE</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Tema oscuro — paleta FAE (naranja corporativo sobre fondo oscuro) */
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2126;
+    --border: #2a2d35;
+    --border2: #363a44;
+    --accent: #F79210;             /* naranja FAE */
+    --accent2: #d87d0c;             /* naranja FAE para hover */
+    --accent-sec: #66CCD8;          /* azul turquesa FAE — secundario */
+    --text: #f0f2f5;
+    --text2: #a8adbb;
+    --text3: #7a808f;
+    --red: #ff4d4d;
+    --green: #4dff91;
+    --blue: #4d9fff;
+    --orange: #F79210;
+    --radius: 10px;
+
+    /* Colores para tags de forma (redondo/cuadrado/varios) */
+    --shape-round: #4d9fff;
+    --shape-round-tint: rgba(77,159,255,0.08);
+    --shape-round-border: rgba(77,159,255,0.27);
+    --shape-square: #ff4d9f;
+    --shape-square-tint: rgba(255,77,159,0.08);
+    --shape-square-border: rgba(255,77,159,0.27);
+    --shape-varios: #aa4dff;
+    --shape-varios-tint: rgba(170,77,255,0.08);
+    --shape-varios-border: rgba(170,77,255,0.27);
+
+    /* Color del texto sobre naranja */
+    --accent-fg: #1a1a1a;
+
+    /* Tintes translúcidos (naranja FAE) */
+    --accent-tint-soft:   rgba(247, 146, 16, 0.08);
+    --accent-tint-medium: rgba(247, 146, 16, 0.14);
+    --accent-tint-strong: rgba(247, 146, 16, 0.40);
+    --accent-tint-border: rgba(247, 146, 16, 0.35);
+    --red-tint-soft:      rgba(255, 77, 77, 0.08);
+    --red-tint-border:    rgba(255, 77, 77, 0.4);
+    --orange-tint:        rgba(247, 146, 16, 0.15);
+
+    --shadow-card: transparent;
+  }
+
+  :root[data-theme="light"] {
+    /* Paleta FAE — colores oficiales del logo */
+    --bg: #ffffff;
+    --surface: #f7f9fc;            /* gris azulado muy suave */
+    --surface2: #eef2f7;            /* algo más marcado para contraste */
+    --border: #d6dde6;              /* bordes visibles */
+    --border2: #a8b4c4;             /* bordes más marcados */
+    --accent: #064D7A;              /* AZUL FAE (texto "FAE" del logo) */
+    --accent2: #043552;              /* azul FAE más oscuro para hover */
+    --accent-sec: #66CCD8;           /* TURQUESA FAE (parte inferior del símbolo) */
+    --text: #0a1628;                /* casi negro azulado */
+    --text2: #1f3252;               /* azul oscuro */
+    --text3: #3d4d65;               /* azul medio oscuro */
+    --red: #c0392b;
+    --green: #1e8449;
+    --blue: #2874a6;
+    --orange: #F79210;              /* NARANJA FAE (parte superior del símbolo) */
+
+    /* Colores de forma adaptados a tema claro */
+    --shape-round: #064D7A;         /* azul FAE para redondo */
+    --shape-round-tint: rgba(6, 77, 122, 0.10);
+    --shape-round-border: rgba(6, 77, 122, 0.35);
+    --shape-square: #b03270;
+    --shape-square-tint: rgba(176, 50, 112, 0.10);
+    --shape-square-border: rgba(176, 50, 112, 0.35);
+    --shape-varios: #6b3fb0;
+    --shape-varios-tint: rgba(107, 63, 176, 0.10);
+    --shape-varios-border: rgba(107, 63, 176, 0.35);
+
+    /* Texto sobre el azul FAE: blanco */
+    --accent-fg: #ffffff;
+
+    /* Tintes translúcidos con el azul corporativo */
+    --accent-tint-soft:   rgba(6, 77, 122, 0.06);
+    --accent-tint-medium: rgba(6, 77, 122, 0.10);
+    --accent-tint-strong: rgba(6, 77, 122, 0.50);
+    --accent-tint-border: rgba(6, 77, 122, 0.45);
+    --red-tint-soft:   rgba(192, 57, 43, 0.08);
+    --red-tint-border: rgba(192, 57, 43, 0.4);
+    --orange-tint: rgba(247, 146, 16, 0.12);
+
+    --shadow-card: 0 1px 3px rgba(10, 22, 40, 0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body, header, .surface, .left-panel, .right-panel, .upload-zone,
+  select, textarea, input, .result-card, .detail-panel, .toast,
+  .empty-state, .results-header, .results-count, .sort-btn,
+  .btn-search, .btn-small, .btn-confirm, .btn-reject {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: transparent;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-mark svg { width: 18px; height: 30px; }
+
+  .logo-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+  }
+
+  .logo-text span { color: var(--text); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 0;
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 24px;
+    gap: 24px;
+  }
+
+  .panel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .upload-zone:hover {
+    border-color: var(--accent);
+    background: var(--accent-tint-soft);
+  }
+
+  .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-tint-soft);
+  }
+
+  .upload-zone.has-image {
+    border-style: solid;
+    border-color: var(--border2);
+  }
+
+  .upload-preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 16px;
+    display: none;
+    background: var(--bg);
+  }
+
+  .upload-zone.has-image .upload-preview { display: block; }
+  .upload-zone.has-image .upload-placeholder { display: none; }
+
+  .upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .upload-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .upload-icon svg { width: 24px; height: 24px; color: var(--text3); }
+
+  .upload-hint {
+    text-align: center;
+  }
+
+  .upload-hint p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .upload-hint .key {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 6px;
+  }
+
+  .upload-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    display: none;
+  }
+
+  .upload-zone.has-image .upload-badge { display: block; }
+
+  .upload-actions {
+    position: absolute;
+    bottom: 12px;
+    display: flex; gap: 8px;
+    display: none;
+  }
+
+  .upload-zone.has-image .upload-actions { display: flex; }
+
+  .btn-small {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+
+  .btn-small:hover { border-color: var(--border), ; color: var(--text); }
+
+  /* DESCRIPCION */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .field-label {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .optional-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: 0.06em;
+  }
+
+  textarea {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px 14px;
+    resize: none;
+    height: 80px;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+
+  textarea::placeholder { color: var(--text3); }
+  textarea:focus { border-color: var(--accent); }
+
+  /* FILTROS */
+  .filters-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .filters-row > select:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  select {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 9px 12px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23555a68' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  select:focus { border-color: var(--accent); }
+
+  /* BUSCADOR DIRECTO POR ID (lookup) */
+  .id-lookup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .id-lookup .id-lookup-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .id-lookup .id-lookup-header svg { width: 13px; height: 13px; }
+  .id-lookup .id-lookup-row {
+    display: flex;
+    gap: 6px;
+  }
+  .id-lookup input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .id-lookup input::placeholder { color: var(--text3); }
+  .id-lookup input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-tint-soft);
+  }
+  .id-lookup .btn-lookup {
+    padding: 8px 12px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .id-lookup .btn-lookup:hover { background: var(--accent2); }
+  .id-lookup .btn-lookup:active { transform: scale(0.98); }
+  .id-lookup .btn-lookup:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .id-lookup .id-lookup-hint {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+
+  /* SEARCH BUTTON */
+  .btn-search {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-search:hover { background: var(--accent2); color: var(--accent-fg); }
+  .btn-search:active { transform: scale(0.99); }
+
+  .btn-search:disabled {
+    background: var(--surface2);
+    color: var(--text3);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-search svg { width: 16px; height: 16px; }
+
+  /* QUALITY INDICATOR */
+  .quality-bar {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .quality-bar.visible { display: flex; }
+
+  .quality-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .quality-label { color: var(--text3); font-family: 'DM Mono', monospace; }
+  .quality-val { color: var(--text2); font-family: 'DM Mono', monospace; }
+  .quality-val.good { color: var(--green); }
+  .quality-val.warn { color: var(--orange); }
+  .quality-val.bad { color: var(--red); }
+
+  .quality-track {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .quality-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 28px 28px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .results-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .results-count span { color: var(--accent); }
+
+  .sort-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .sort-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .sort-btn.active {
+    background: var(--surface2);
+    border-color: var(--border2);
+    color: var(--text2);
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text3);
+  }
+
+  .empty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    gap: 6px;
+    opacity: 0.15;
+  }
+
+  .empty-cell {
+    width: 64px; height: 64px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .empty-cell:nth-child(2) { opacity: 0.6; }
+  .empty-cell:nth-child(4) { opacity: 0.8; }
+  .empty-cell:nth-child(6) { opacity: 0.4; }
+
+  .empty-text {
+    text-align: center;
+  }
+
+  .empty-text p { font-size: 14px; color: var(--text3); }
+  .empty-text .sub { font-size: 12px; margin-top: 4px; }
+
+  /* RESULTS GRID */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  /* RESULT CARD */
+  .result-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: fadeIn 0.3s ease both;
+  }
+
+  .result-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+
+  .result-card.top-match {
+    border-color: var(--accent-tint-border);
+  }
+
+  .result-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-tint-soft);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-img-wrap {
+    aspect-ratio: 1;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 12px;
+  }
+
+  .card-img-placeholder {
+    width: 40px; height: 40px;
+    opacity: 0.2;
+  }
+
+  .card-score-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 5px;
+  }
+
+  .score-high { background: rgba(77, 255, 145, 0.15); color: var(--green); }
+  .score-mid  { background: var(--orange-tint); color: var(--orange); }
+  .score-low  { background: rgba(138, 143, 158, 0.12); color: var(--text3); }
+
+  .top-label {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.06em;
+  }
+
+  .card-body {
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .card-ref {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text3);
+  }
+
+  .tag.shape-round  { border-color: var(--shape-round-border);  color: var(--shape-round);  background: var(--shape-round-tint); }
+  .tag.shape-square { border-color: var(--shape-square-border); color: var(--shape-square); background: var(--shape-square-tint); }
+  .tag.shape-varios { border-color: var(--shape-varios-border); color: var(--shape-varios); background: var(--shape-varios-tint); }
+  .tag.fae { border-color: var(--accent-tint-border); color: var(--accent); background: var(--accent-tint-soft); }
+
+  /* DETAIL PANEL */
+  .detail-panel {
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 14px;
+    padding: 24px;
+    display: none;
+    flex-direction: column;
+    animation: fadeIn 0.25s ease;
+  }
+
+  .detail-panel.visible { display: flex; }
+
+  .detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .detail-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .detail-close {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.15s;
+  }
+
+  .detail-close:hover { border-color: var(--border2); color: var(--text2); }
+
+  /* Responsive: en pantallas estrechas, apilar las columnas */
+  @media (max-width: 900px) {
+    .detail-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .detail-grid > .detail-img {
+      aspect-ratio: 16/9 !important;
+      max-height: 220px;
+    }
+  }
+
+  .detail-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-field-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .detail-field-val {
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    word-break: break-word;
+  }
+
+  .detail-field-val.highlight { color: var(--accent); font-weight: 500; }
+  .detail-field-val.empty { color: var(--text3); font-style: italic; font-family: 'DM Sans', sans-serif; font-size: 12px; }
+
+  .detail-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-confirm {
+    flex: 1;
+    padding: 11px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-confirm:hover { background: var(--accent2); }
+
+  .btn-reject {
+    padding: 11px 14px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-reject:hover { border-color: var(--red); color: var(--red); }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 60px 0;
+  }
+
+  .loading-overlay.visible { display: flex; }
+
+  .loader-ring {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .loader-step {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    transition: opacity 0.3s, color 0.3s;
+  }
+
+  .loader-step.active { opacity: 1; color: var(--text2); }
+  .loader-step.done { opacity: 0.5; color: var(--green); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success .toast-dot { background: var(--green); }
+  .toast.info .toast-dot { background: var(--accent); }
+  .toast-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* DRAG & DROP */
+  .drop-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(14,15,17,0.8);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .drop-mask.visible { display: flex; }
+
+  .drop-mask-inner {
+    border: 2px dashed var(--accent);
+    border-radius: 20px;
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .drop-mask-inner p {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  /* HIDDEN */
+  #fileInput { display: none; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <!-- Símbolo FAE — paths exactos del logo oficial (rombo naranja + rombo turquesa) -->
+      <svg viewBox="14 14 41 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" fill="#F79210"
+          d="M 47.79 41.84 L 37.83 51.82 L 27.87 41.84 L 17.91 51.82 L 17.91 31.86 L 27.87 21.88 Z"/>
+        <path fill-rule="evenodd" fill="#66CCD8"
+          d="M 17.91 57.38 L 27.88 47.29 L 37.95 57.38 L 47.91 47.39 L 47.91 67.36 L 37.95 77.33 Z"/>
+      </svg>
+    </div>
+    <div class="logo-text"><span>FAE</span> / identificador conectores</div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot"></div>
+    <span>BD: 1049 conectores</span>
+    <button id="themeToggle" title="Cambiar tema" onclick="toggleTheme()"
+            style="margin-left: 12px; background: transparent; border: 1px solid var(--border2); color: var(--text2); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.15s;">
+      <svg id="themeIconMoon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg id="themeIconSun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT -->
+  <div class="left-panel">
+    <div class="panel-label">Entrada</div>
+
+    <!-- Upload -->
+    <div class="upload-zone" id="uploadZone">
+      <img class="upload-preview" id="previewImg" src="" alt="preview">
+      <div class="upload-badge" id="uploadBadge">imagen cargada</div>
+
+      <div class="upload-placeholder">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+        </div>
+        <div class="upload-hint">
+          <p>Arrastra una foto del conector<br>o haz clic para seleccionar</p>
+          <p class="key">PNG · JPG · WEBP · máx. 10 MB</p>
+        </div>
+      </div>
+
+      <div class="upload-actions">
+        <button class="btn-small" onclick="clearImage(event)">Quitar</button>
+        <button class="btn-small" onclick="triggerUpload(event)">Cambiar</button>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+
+    <!-- Miniaturas de fotos adicionales -->
+    <div id="thumbStrip" style="display:none; gap:8px; flex-wrap:wrap; align-items:center;">
+      <div class="panel-label" style="width:100%; margin-bottom:4px;">fotos adicionales</div>
+    </div>
+
+    <!-- Buscador directo por ID o Referencia FAE -->
+    <div class="id-lookup">
+      <div class="id-lookup-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        Buscar por ID o Ref FAE
+      </div>
+      <div class="id-lookup-row">
+        <input type="text" id="idLookupInput" placeholder="Ej: 955 o 311160" autocomplete="off" />
+        <button class="btn-lookup" id="idLookupBtn" type="button">Buscar</button>
+      </div>
+      <div class="id-lookup-hint">Si ya conoces el conector, ve directo sin subir foto</div>
+    </div>
+
+    <!-- Calidad imagen -->
+    <div class="quality-bar" id="qualityBar">
+      <div class="quality-row">
+        <span class="quality-label">RESOLUCIÓN</span>
+        <span class="quality-val good" id="qRes">—</span>
+      </div>
+      <div class="quality-track"><div class="quality-fill" id="qResBar" style="width:0;background:var(--green)"></div></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="field-group">
+      <div class="field-label">
+        Filtros
+        <span class="optional-tag">opcional</span>
+      </div>
+      <div class="filters-row">
+        <select id="filterForma">
+          <option value="">Todas las formas</option>
+          <option value="Redondo">Redondo</option>
+          <option value="Cuadrado">Cuadrado</option>
+          <option value="Varios">Varios</option>
+          <option value="Borne/Terminal">Borne / Terminal</option>
+        </select>
+        <select id="filterPines">
+          <option value="">Todos los pines</option>
+          <option value="1">1 pin</option>
+          <option value="2">2 pines</option>
+          <option value="3">3 pines</option>
+          <option value="4">4 pines</option>
+          <option value="5">5+ pines</option>
+        </select>
+        <select id="filterTipoMH">
+          <option value="">Macho/Hembra</option>
+          <!-- opciones dinámicas cargadas desde /filtros -->
+        </select>
+      </div>
+    </div>
+
+    <!-- Nº de resultados -->
+    <div class="field-group">
+      <div class="field-label">
+        Nº de resultados
+        <span class="optional-tag" id="topKValue">12</span>
+      </div>
+      <input type="range" id="topKSlider" min="6" max="100" step="6" value="12"
+             oninput="document.getElementById('topKValue').textContent = this.value"
+             style="width:100%; accent-color: var(--accent); cursor: pointer;">
+    </div>
+
+    <!-- Modo preciso -->
+    <div class="field-group" id="rerankGroup" style="display:none;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;">
+        <input type="checkbox" id="rerankToggle" style="accent-color: var(--accent); cursor:pointer;">
+        <span class="field-label" style="margin:0;">
+          Modo preciso (ViT-L)
+          <span class="optional-tag">experimental · +3–8 s</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- Modo evaluación -->
+    <div class="field-group" style="background: var(--accent-tint-soft); border: 1px solid var(--accent-tint-border); border-radius: 8px; padding: 12px;">
+      <div class="field-label" style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
+        <span style="width:7px; height:7px; background:var(--accent); border-radius:50%; display:inline-block;"></span>
+        Modo evaluación
+        <span class="optional-tag">opcional</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text3); margin-bottom: 8px; line-height: 1.4;">
+        Si sabes qué ID debería salir, introdúcelo y el sistema registrará en qué puesto queda.
+      </div>
+      <input type="number" id="expectedId" min="1" placeholder="ID real del conector"
+             style="width:100%; padding: 8px 10px; background:var(--surface); border:1px solid var(--border2); border-radius:6px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px;">
+    </div>
+
+    <!-- Botón buscar -->
+    <button class="btn-search" id="searchBtn" onclick="runSearch()" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <span id="searchBtnLabel">Identificar conector</span>
+    </button>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel" id="rightPanel">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-grid">
+        <div class="empty-cell"></div>
+        <div class="empty-cell"></div>
+        <div class="empty-cell"></div>
+        <div class="empty-cell"></div>
+        <div class="empty-cell"></div>
+        <div class="empty-cell"></div>
+      </div>
+      <div class="empty-text">
+        <p>Carga una foto para comenzar</p>
+        <p class="sub">El sistema buscará los conectores más similares</p>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loader-ring"></div>
+      <div class="loader-steps">
+        <div class="loader-step active" style="opacity:1; color:var(--text2);">Identificando conector…</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsSection" style="display:none; flex-direction:column; gap:16px;">
+      <div class="results-header">
+        <div class="results-count">
+          <span id="resultsNum">0</span> candidatos encontrados
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" id="rankLookup" placeholder="¿puesto del ID?"
+                   min="1" onkeydown="if(event.key==='Enter') lookupRank()"
+                   style="width:140px; padding:6px 10px; background:var(--surface); border:1px solid var(--border2); border-radius:6px; color:var(--text); font-family:'DM Mono',monospace; font-size:11px;">
+            <button onclick="lookupRank()" style="padding:6px 10px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-family:'DM Mono',monospace; font-size:10px; cursor:pointer;">buscar</button>
+          </div>
+          <div class="sort-row">
+            <button class="sort-btn active" onclick="setSortMode('sim', this)">Similitud</button>
+            <button class="sort-btn" onclick="setSortMode('id', this)">ID</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Banner de resultado de evaluación -->
+      <div id="evalBanner" style="display:none; background: var(--accent-tint-medium); border: 1px solid var(--accent-tint-border); border-radius: 8px; padding: 12px 14px; font-family: 'DM Mono', monospace; font-size: 12px;">
+        <span id="evalBannerText"></span>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-header" style="margin-bottom: 16px;">
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Seleccionado</div>
+            <div class="detail-id" id="detailId" style="font-size: 20px; font-weight: 500;">—</div>
+          </div>
+          <button class="detail-close" onclick="closeDetail()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="detail-grid" style="display: grid; grid-template-columns: 240px 1fr 1fr; gap: 20px; margin-bottom: 16px;">
+          <!-- Columna 1: imagen grande -->
+          <div class="detail-img" style="aspect-ratio: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <img id="detailImg" src="" alt="" style="width: 100%; height: 100%; object-fit: contain; padding: 12px;">
+          </div>
+
+          <!-- Columna 2: propiedades principales -->
+          <div class="detail-fields">
+            <div class="detail-field">
+              <div class="detail-field-label">Referencia FAE</div>
+              <div class="detail-field-val highlight" id="detailRef">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Forma</div>
+              <div class="detail-field-val" id="detailForma">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Terminales</div>
+              <div class="detail-field-val" id="detailPines">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Tipo (M/H)</div>
+              <div class="detail-field-val empty" id="detailTipoMH">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Similitud</div>
+              <div class="detail-field-val" id="detailScore">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Es de FAE</div>
+              <div class="detail-field-val" id="detailFae">—</div>
+            </div>
+          </div>
+
+          <!-- Columna 3: datos comerciales -->
+          <div class="detail-fields">
+            <div class="detail-field">
+              <div class="detail-field-label">Ref. Comercial</div>
+              <div class="detail-field-val empty" id="detailRefCom">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Proveedor</div>
+              <div class="detail-field-val empty" id="detailProveedor">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Contraconector</div>
+              <div class="detail-field-val empty" id="detailContra">sin asignar</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">ID Contraconector</div>
+              <div class="detail-field-val empty" id="detailIdContra">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Precio unitario</div>
+              <div class="detail-field-val empty" id="detailPrecio">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Colores</div>
+              <div class="detail-field-val empty" id="detailColores">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Descripción a ancho completo (textos largos) -->
+        <div class="detail-field" id="detailDescWrap" style="margin-bottom: 16px; display: none;">
+          <div class="detail-field-label">Descripción</div>
+          <div class="detail-field-val" id="detailDesc" style="white-space: pre-wrap; line-height: 1.5;">—</div>
+        </div>
+
+        <div class="detail-actions">
+          <button class="btn-confirm" onclick="confirmMatch()">✓ Confirmar identificación</button>
+          <button class="btn-reject" onclick="rejectMatch()">Descartar</button>
+        </div>
+      </div>
+
+      <!-- Cards grid -->
+      <div class="results-grid" id="resultsGrid"></div>
+
+      <!-- Histórico de pruebas (Modo evaluación) -->
+      <div id="evalPanel" style="display:none; margin-top: 20px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase;">
+            Histórico de pruebas
+          </div>
+          <button onclick="clearEvalHistory()"
+                  style="padding: 5px 10px; background: transparent; border: 1px solid var(--border2); border-radius: 5px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer;">
+            limpiar
+          </button>
+        </div>
+
+        <!-- Stats -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;">
+          <div style="background: var(--surface2); border-radius: 6px; padding: 10px;">
+            <div style="font-size: 10px; color: var(--text3); margin-bottom: 2px; font-family: 'DM Mono', monospace;">Pruebas</div>
+            <div style="font-size: 20px; font-weight: 500; color: var(--text);" id="statTotal">0</div>
+          </div>
+          <div style="background: var(--surface2); border-radius: 6px; padding: 10px;">
+            <div style="font-size: 10px; color: var(--text3); margin-bottom: 2px; font-family: 'DM Mono', monospace;">En top 3</div>
+            <div style="font-size: 20px; font-weight: 500; color: var(--green);" id="statTop3">0</div>
+          </div>
+          <div style="background: var(--surface2); border-radius: 6px; padding: 10px;">
+            <div style="font-size: 10px; color: var(--text3); margin-bottom: 2px; font-family: 'DM Mono', monospace;">En top 12</div>
+            <div style="font-size: 20px; font-weight: 500; color: var(--green);" id="statTop12">0</div>
+          </div>
+          <div style="background: var(--surface2); border-radius: 6px; padding: 10px;">
+            <div style="font-size: 10px; color: var(--text3); margin-bottom: 2px; font-family: 'DM Mono', monospace;">Puesto medio</div>
+            <div style="font-size: 20px; font-weight: 500; color: var(--text);" id="statAvg">—</div>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <div style="overflow-x: auto;">
+          <table style="width:100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 11px;">
+            <thead>
+              <tr style="color: var(--text3); border-bottom: 1px solid var(--border);">
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">hora</th>
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">ID real</th>
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">puesto</th>
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">similitud</th>
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">filtros</th>
+                <th style="text-align:left; padding: 6px 8px; font-weight: 500;">nº fotos</th>
+              </tr>
+            </thead>
+            <tbody id="evalTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Drop mask -->
+<div class="drop-mask" id="dropMask">
+  <div class="drop-mask-inner">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <path d="M20 8v16M12 16l8-8 8 8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 28h24" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+    </svg>
+    <p>suelta la imagen aquí</p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-dot"></div>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ── TEMA (se aplica antes de nada para evitar flash) ──────────────────
+(function initTheme() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  applyTheme(saved);
+})();
+
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  // Alternar iconos del botón
+  const moon = document.getElementById('themeIconMoon');
+  const sun  = document.getElementById('themeIconSun');
+  if (moon && sun) {
+    if (theme === 'light') { moon.style.display='none'; sun.style.display=''; }
+    else                   { moon.style.display=''; sun.style.display='none'; }
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────
+// Si sirves el HTML desde el mismo FastAPI (http://localhost:8000/),
+// API_BASE puede ser '' (relativo). Si lo abres como file://, pon la URL absoluta.
+const API_BASE = (location.protocol === 'file:') ? 'http://localhost:8000' : '';
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let hasImage = false;
+let currentFiles = [];           // File[] del input (1..N imágenes)
+let currentResults = [];
+let selectedCard = null;
+let sortMode = 'sim';
+let evalHistory = [];            // [{hora, idReal, puesto, similitud, filtros, nImgs}]
+let rejectedIds = new Set();     // IDs descartados temporalmente (con botón "Descartar")
+
+// ── INIT: actualizar contador del header con datos reales ────────────
+(async () => {
+  try {
+    const r = await fetch(`${API_BASE}/health`);
+    if (r.ok) {
+      const h = await r.json();
+      const span = document.querySelector('.header-right span');
+      if (span) {
+        const modelTxt = h.has_rerank ? 'B+L' : 'B';
+        span.textContent = `BD: ${h.conectores} conectores · ${h.device} · ${modelTxt}`;
+      }
+      // Mostrar el toggle de re-ranking solo si el backend lo soporta
+      if (h.has_rerank) {
+        const grp = document.getElementById('rerankGroup');
+        if (grp) grp.style.display = '';
+      }
+    }
+  } catch (e) {
+    const dot = document.querySelector('.status-dot');
+    if (dot) dot.style.background = 'var(--red)';
+    const span = document.querySelector('.header-right span');
+    if (span) span.textContent = 'API offline (puerto 8000)';
+  }
+
+  // Poblar dropdown tipo M/H desde /filtros
+  try {
+    const r = await fetch(`${API_BASE}/filtros`);
+    if (r.ok) {
+      const f = await r.json();
+      const sel = document.getElementById('filterTipoMH');
+      if (sel && Array.isArray(f.tipo_mh)) {
+        f.tipo_mh.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
+        });
+      }
+    }
+  } catch (e) { /* silencioso: si falla, el dropdown queda solo con "Macho/Hembra" */ }
+})();
+
+// ── UPLOAD (múltiples fotos) ─────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const searchBtn  = document.getElementById('searchBtn');
+const thumbStrip = document.getElementById('thumbStrip');
+const MAX_FILES = 4;
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('dropMask').classList.add('visible'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.getElementById('dropMask').classList.remove('visible'); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('dropMask').classList.remove('visible');
+  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+function triggerUpload(e) { e.stopPropagation(); fileInput.click(); }
+
+/* ─── Listeners del buscador por ID/Ref FAE ─── */
+(function bindIdLookup() {
+  const input = document.getElementById('idLookupInput');
+  const btn = document.getElementById('idLookupBtn');
+  if (!input || !btn) return;
+  btn.addEventListener('click', runLookupById);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runLookupById();
+    }
+  });
+})();
+
+function addFiles(fileList) {
+  const incoming = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+  if (incoming.length === 0) {
+    showToast('Solo se aceptan imágenes', 'info');
+    return;
+  }
+  for (const f of incoming) {
+    if (currentFiles.length >= MAX_FILES) {
+      showToast(`Máximo ${MAX_FILES} fotos por búsqueda`, 'info');
+      break;
+    }
+    currentFiles.push(f);
+  }
+  fileInput.value = '';  // permitir volver a seleccionar la misma foto si se desea
+  renderPrimary();
+  renderThumbs();
+}
+
+function renderPrimary() {
+  if (currentFiles.length === 0) {
+    previewImg.src = '';
+    uploadZone.classList.remove('has-image');
+    hasImage = false;
+    searchBtn.disabled = true;
+    document.getElementById('qualityBar').classList.remove('visible');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewImg.src = e.target.result;
+    uploadZone.classList.add('has-image');
+    hasImage = true;
+    searchBtn.disabled = false;
+    analyzeQuality(e.target.result);
+    resetResults();
+  };
+  reader.readAsDataURL(currentFiles[0]);
+}
+
+function renderThumbs() {
+  // Limpiar (manteniendo el label)
+  thumbStrip.innerHTML = '<div class="panel-label" style="width:100%; margin-bottom:4px;">fotos adicionales</div>';
+
+  if (currentFiles.length <= 1 && currentFiles.length === 0) {
+    thumbStrip.style.display = 'none';
+    return;
+  }
+
+  // Miniaturas de las fotos secundarias (índices 1..N)
+  for (let i = 1; i < currentFiles.length; i++) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative; width:80px; height:80px; border:1px solid var(--border2); border-radius:8px; overflow:visible; background:var(--surface2);';
+
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:8px;';
+    img.alt = `Foto ${i+1}`;
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.readAsDataURL(currentFiles[i]);
+    wrap.appendChild(img);
+
+    // Preview grande al hover
+    const preview = document.createElement('div');
+    preview.style.cssText = 'position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); width:220px; height:220px; border:1px solid var(--border2); border-radius:10px; background:var(--surface); overflow:hidden; pointer-events:none; opacity:0; transition:opacity 0.15s; z-index:20; box-shadow:0 6px 20px rgba(0,0,0,0.4);';
+    const previewImg = document.createElement('img');
+    previewImg.style.cssText = 'width:100%; height:100%; object-fit:contain; background:var(--surface2);';
+    reader.onload && (() => {
+      const pReader = new FileReader();
+      pReader.onload = e => { previewImg.src = e.target.result; };
+      pReader.readAsDataURL(currentFiles[i]);
+    })();
+    preview.appendChild(previewImg);
+    wrap.appendChild(preview);
+
+    wrap.addEventListener('mouseenter', () => { preview.style.opacity = '1'; });
+    wrap.addEventListener('mouseleave', () => { preview.style.opacity = '0'; });
+
+    // Botón quitar
+    const rm = document.createElement('button');
+    rm.innerHTML = '×';
+    rm.style.cssText = 'position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(0,0,0,0.7); color:#fff; cursor:pointer; font-size:13px; line-height:1; padding:0; z-index:10;';
+    rm.title = 'Quitar esta foto';
+    rm.onclick = e => {
+      e.stopPropagation();
+      currentFiles.splice(i, 1);
+      renderPrimary();
+      renderThumbs();
+    };
+    wrap.appendChild(rm);
+
+    thumbStrip.appendChild(wrap);
+  }
+
+  // Botón "+" para añadir más
+  if (currentFiles.length < MAX_FILES) {
+    const add = document.createElement('button');
+    add.innerHTML = '+';
+    add.style.cssText = 'width:80px; height:80px; border:1.5px dashed var(--border2); border-radius:8px; background:transparent; color:var(--text3); font-size:26px; cursor:pointer; line-height:1;';
+    add.title = 'Añadir otra foto';
+    add.onclick = e => { e.stopPropagation(); fileInput.click(); };
+    thumbStrip.appendChild(add);
+  }
+
+  thumbStrip.style.display = currentFiles.length > 1 || currentFiles.length < MAX_FILES ? 'flex' : 'none';
+  // Mostrar siempre si hay al menos 1 foto (para permitir añadir más)
+  if (currentFiles.length >= 1) thumbStrip.style.display = 'flex';
+}
+
+function clearImage(e) {
+  e.stopPropagation();
+  currentFiles = [];
+  renderPrimary();
+  renderThumbs();
+  resetResults();
+}
+
+function analyzeQuality(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const qBar = document.getElementById('qualityBar');
+    qBar.classList.add('visible');
+
+    const resPct = Math.min(100, (Math.min(w, h) / 640) * 100);
+
+    const resEl = document.getElementById('qRes');
+    const resBar = document.getElementById('qResBar');
+    resEl.textContent = `${w}×${h}`;
+    resEl.className = 'quality-val ' + (resPct > 60 ? 'good' : resPct > 30 ? 'warn' : 'bad');
+    resBar.style.width = resPct + '%';
+    resBar.style.background = resPct > 60 ? 'var(--green)' : resPct > 30 ? 'var(--orange)' : 'var(--red)';
+  };
+  img.src = dataUrl;
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────
+async function runSearch() {
+  if (!hasImage || currentFiles.length === 0) return;
+
+  resetResults();
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('loadingOverlay').classList.add('visible');
+  document.getElementById('resultsSection').style.display = 'none';
+  searchBtn.disabled = true;
+
+  try {
+    const forma = document.getElementById('filterForma').value;
+    const pines = document.getElementById('filterPines').value;
+    const tipoMH = document.getElementById('filterTipoMH').value;
+    const topK = document.getElementById('topKSlider').value || '12';
+    const rerankCheckbox = document.getElementById('rerankToggle');
+    const rerank = rerankCheckbox && rerankCheckbox.checked ? '1' : '0';
+
+    const fd = new FormData();
+    // Enviar TODAS las fotos bajo el mismo nombre 'files' (FastAPI recibirá List[UploadFile])
+    for (const f of currentFiles) {
+      fd.append('files', f);
+    }
+    fd.append('top_k', topK);
+    fd.append('rerank', rerank);
+    if (forma) fd.append('forma', forma);
+    if (pines) fd.append('terminales', pines);   // 1..5 ; el backend trata 5 como "5+"
+    if (tipoMH) fd.append('tipo_mh', tipoMH);
+
+    const r = await fetch(`${API_BASE}/search`, { method: 'POST', body: fd });
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`HTTP ${r.status}: ${err}`);
+    }
+    const data = await r.json();
+
+    setTimeout(() => {
+      document.getElementById('loadingOverlay').classList.remove('visible');
+
+      if (data.aviso) showToast(data.aviso, 'info');
+
+      // Mapear respuesta del backend a la estructura que usa renderResults/openDetail
+      currentResults = (data.results || []).map(r => {
+        const m = r.meta || {};
+        return {
+          id: String(r.id_conector),
+          score: r.similitud,
+          ref: m['Referencia FAE'] || m['Referencia Comercial'] || '',
+          refFae: m['Referencia FAE'] || '',
+          refComercial: m['Referencia Comercial'] || '',
+          proveedor: m['Proveedor'] || '',
+          descripcion: m['Descripción'] || '',
+          forma: m['Formas'] || '',
+          pines: m['Terminales'] ? parseInt(m['Terminales']) : null,
+          fae: m['Es de FAE'] === 'Sí',
+          tipoMH: m['Tipo (M/H)'] || '',
+          contra: m['Contraconector'] || '',
+          idContra: m['ID Contraconector'] || '',
+          colores: m['Colores'] || '',
+          precio: m['Precio unitario (€)'],
+        };
+      });
+
+      document.getElementById('resultsNum').textContent =
+        `${currentResults.length}` + (data.n_candidatos ? ` (de ${data.n_candidatos} candidatos)` : '');
+
+      // Aviso del modo detectado
+      const modos = data.modos || (data.modo ? [data.modo] : []);
+      if (modos.includes('dibujo')) {
+        showToast('Detectado: dibujo técnico (sin recorte automático)', 'info');
+      } else if (modos.includes('foto_sin_recorte')) {
+        showToast('Foto sin objeto claro; usando imagen completa', 'info');
+      }
+
+      renderResults();
+
+      // Si el usuario puso un ID esperado, registrar la prueba
+      const expected = getExpectedId();
+      if (expected !== null) {
+        recordEvaluation(expected, data);
+      } else {
+        // Sin ID esperado → ocultar banner previo por si lo había
+        document.getElementById('evalBanner').style.display = 'none';
+      }
+
+      searchBtn.disabled = false;
+    }, 200);
+
+  } catch (e) {
+    document.getElementById('loadingOverlay').classList.remove('visible');
+    document.getElementById('emptyState').style.display = '';
+    showToast('Error: ' + e.message, 'info');
+    searchBtn.disabled = false;
+    console.error(e);
+  }
+}
+
+/* ─── Búsqueda directa por ID o Referencia FAE ─────────────────────────── */
+async function runLookupById() {
+  const input = document.getElementById('idLookupInput');
+  const btn = document.getElementById('idLookupBtn');
+  const q = (input.value || '').trim();
+  if (!q) {
+    input.focus();
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '…';
+
+  try {
+    const r = await fetch(`${API_BASE}/by_id?q=${encodeURIComponent(q)}&include_similar=1&max_similar=12`);
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`HTTP ${r.status}: ${err}`);
+    }
+    const data = await r.json();
+
+    if (!data.match) {
+      showToast(data.aviso || `No encontrado: ${q}`, 'info');
+      return;
+    }
+
+    // Mapear match + similares a la estructura currentResults (misma que /search)
+    const mapResult = (r, scoreOverride) => {
+      const m = r.meta || {};
+      return {
+        id: String(r.id_conector),
+        score: scoreOverride !== undefined ? scoreOverride : (r.similitud ?? 0),
+        ref: m['Referencia FAE'] || m['Referencia Comercial'] || '',
+        refFae: m['Referencia FAE'] || '',
+        refComercial: m['Referencia Comercial'] || '',
+        proveedor: m['Proveedor'] || '',
+        descripcion: m['Descripción'] || '',
+        forma: m['Formas'] || '',
+        pines: m['Terminales'] ? parseInt(m['Terminales']) : null,
+        fae: m['Es de FAE'] === 'Sí',
+        tipoMH: m['Tipo (M/H)'] || '',
+        contra: m['Contraconector'] || '',
+        idContra: m['ID Contraconector'] || '',
+        colores: m['Colores'] || '',
+        precio: m['Precio unitario (€)'],
+      };
+    };
+
+    // El match va primero con score 1.0 (marcado como "encontrado")
+    const matchResult = mapResult(data.match, 1.0);
+    // Los similares después, sin score (se renderizan sin badge de %)
+    const similares = (data.similares || []).map(r => mapResult(r, 0));
+
+    currentResults = [matchResult, ...similares];
+
+    // Actualizar cabecera
+    const totalTxt = document.getElementById('resultsNum');
+    if (totalTxt) {
+      totalTxt.textContent = `#${data.match.id_conector} + ${data.n_similares} similares`;
+    }
+
+    // Ocultar empty state, mostrar resultados
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'flex';
+
+    // Renderizar y abrir directamente el panel de detalle del match
+    renderResults();
+
+    // Abrir detalle del conector encontrado automáticamente
+    setTimeout(() => {
+      const firstCard = document.querySelector('.result-card');
+      if (firstCard) openDetail(matchResult, firstCard);
+    }, 100);
+
+    // Ocultar banner de evaluación si estaba activo
+    const evalBanner = document.getElementById('evalBanner');
+    if (evalBanner) evalBanner.style.display = 'none';
+
+    const matchTypeTxt = {
+      'id': 'ID',
+      'ref_fae': 'Ref FAE',
+      'ref_comercial': 'Ref Comercial',
+    }[data.match_type] || 'ID';
+    showToast(`Conector #${data.match.id_conector} (coincidencia por ${matchTypeTxt})`, 'info');
+
+  } catch (e) {
+    showToast('Error: ' + e.message, 'info');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function renderResults() {
+  const section = document.getElementById('resultsSection');
+  section.style.display = 'flex';
+
+  // Filtrar descartados antes de ordenar
+  const visible = currentResults.filter(c => !rejectedIds.has(String(c.id)));
+  const sorted = sortResults(visible);
+
+  // Actualizar contador: visibles + (descartados si hay)
+  const numEl = document.getElementById('resultsNum');
+  numEl.textContent = sorted.length;
+
+  // Barra de descartados: se pinta/oculta encima del grid
+  let rejectedBar = document.getElementById('rejectedBar');
+  if (rejectedIds.size > 0) {
+    if (!rejectedBar) {
+      rejectedBar = document.createElement('div');
+      rejectedBar.id = 'rejectedBar';
+      rejectedBar.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; font-family:"DM Mono",monospace; font-size:11px; color:var(--text2); margin-bottom:8px;';
+      document.getElementById('resultsGrid').insertAdjacentElement('beforebegin', rejectedBar);
+    }
+    rejectedBar.innerHTML = `
+      <span>${rejectedIds.size} descartado${rejectedIds.size>1?'s':''}</span>
+      <button onclick="restoreRejected()" style="padding:4px 10px; background:transparent; border:1px solid var(--border2); border-radius:5px; color:var(--text2); font-family:'DM Mono',monospace; font-size:10px; cursor:pointer;">mostrar de nuevo</button>
+    `;
+  } else if (rejectedBar) {
+    rejectedBar.remove();
+  }
+
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = '';
+
+  if (sorted.length === 0) {
+    const msg = rejectedIds.size > 0
+      ? 'Todos los candidatos están descartados. Pulsa "mostrar de nuevo" para recuperarlos.'
+      : 'Sin resultados con esos filtros';
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${msg}</div>`;
+    return;
+  }
+
+  sorted.forEach((c, idx) => {
+    const scoreClass = c.score > 0.85 ? 'score-high' : c.score > 0.65 ? 'score-mid' : 'score-low';
+    const shapeTag = c.forma ? `<span class="tag shape-${c.forma.toLowerCase().replace('/','-')}">${c.forma}</span>` : '';
+    const pinesTag = c.pines ? `<span class="tag">${c.pines}p</span>` : '';
+    const faeTag = c.fae ? `<span class="tag fae">FAE</span>` : '';
+    const isTop = idx === 0 && sortMode === 'sim';
+    const imgUrl = `${API_BASE}/imagen/${c.id}`;
+    const refTxt = c.ref || c.refComercial || '';
+
+    const card = document.createElement('div');
+    card.className = 'result-card' + (isTop ? ' top-match' : '');
+    card.style.animationDelay = (idx * 0.04) + 's';
+    card.dataset.id = c.id;
+    card.innerHTML = `
+      <div class="card-img-wrap">
+        <img src="${imgUrl}" alt="Conector ${c.id}" loading="lazy"
+             onerror="this.src='${placeholderSVG(c.forma)}'">
+        ${isTop ? '<span class="top-label">mejor</span>' : ''}
+        <span class="card-score-badge ${scoreClass}">${Math.round(c.score * 100)}%</span>
+      </div>
+      <div class="card-body">
+        <div class="card-id">#${c.id}</div>
+        ${refTxt ? `<div class="card-ref">${refTxt}</div>` : ''}
+        <div class="card-tags">${shapeTag}${pinesTag}${faeTag}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => openDetail(c, card));
+    grid.appendChild(card);
+  });
+}
+
+function sortResults(results) {
+  if (sortMode === 'sim') return [...results].sort((a,b) => b.score - a.score);
+  return [...results].sort((a,b) => parseInt(a.id) - parseInt(b.id));
+}
+
+function setSortMode(mode, btn) {
+  sortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (currentResults.length) renderResults();
+}
+
+// ── DETAIL ────────────────────────────────────────────────────────────
+function openDetail(c, cardEl) {
+  if (selectedCard) selectedCard.classList.remove('selected');
+  selectedCard = cardEl;
+  cardEl.classList.add('selected');
+
+  // Helper: rellena un campo con valor o placeholder "—" + clase empty
+  function setField(id, value, opts = {}) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasValue = value !== null && value !== undefined && value !== '' && !Number.isNaN(value);
+    el.textContent = hasValue ? String(value) : (opts.emptyText || '—');
+    el.className = 'detail-field-val' +
+      (hasValue && opts.highlight ? ' highlight' : '') +
+      (!hasValue ? ' empty' : '');
+  }
+
+  // Cabecera
+  document.getElementById('detailId').textContent = '#' + c.id;
+  const detailImg = document.getElementById('detailImg');
+  detailImg.src = `${API_BASE}/imagen/${c.id}`;
+  detailImg.onerror = () => { detailImg.src = placeholderSVG(c.forma); };
+
+  // Columna 2: propiedades
+  setField('detailRef', c.refFae, { highlight: true, emptyText: 'sin referencia FAE' });
+  setField('detailForma', c.forma);
+  setField('detailPines', c.pines ? c.pines + ' terminales' : null);
+  setField('detailTipoMH', c.tipoMH);
+  const scoreEl = document.getElementById('detailScore');
+  scoreEl.textContent = (c.score * 100).toFixed(1) + '% similitud';
+  scoreEl.className = 'detail-field-val';
+  const faeEl = document.getElementById('detailFae');
+  faeEl.textContent = c.fae ? 'Sí' : 'No';
+  faeEl.className = 'detail-field-val' + (c.fae ? ' highlight' : '');
+
+  // Columna 3: datos comerciales
+  setField('detailRefCom', c.refComercial);
+  setField('detailProveedor', c.proveedor);
+  setField('detailContra', c.contra, { emptyText: 'sin asignar' });
+  setField('detailIdContra', c.idContra);
+  const precioTxt = (c.precio !== null && c.precio !== undefined && c.precio !== '' && !Number.isNaN(parseFloat(c.precio)))
+    ? parseFloat(c.precio).toFixed(2).replace('.', ',') + ' €'
+    : null;
+  setField('detailPrecio', precioTxt);
+  setField('detailColores', c.colores);
+
+  // Descripción solo si hay algo (ancho completo)
+  const descWrap = document.getElementById('detailDescWrap');
+  const descEl = document.getElementById('detailDesc');
+  if (c.descripcion && String(c.descripcion).trim()) {
+    descEl.textContent = c.descripcion;
+    descWrap.style.display = '';
+  } else {
+    descWrap.style.display = 'none';
+  }
+
+  document.getElementById('detailPanel').classList.add('visible');
+  document.getElementById('detailPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+  if (selectedCard) { selectedCard.classList.remove('selected'); selectedCard = null; }
+}
+
+function confirmMatch() {
+  const id = document.getElementById('detailId').textContent;
+  showToast(`Conector ${id} confirmado`, 'success');
+  closeDetail();
+}
+
+function rejectMatch() {
+  if (!selectedCard) return;
+  const id = selectedCard.dataset.id;
+  if (id) rejectedIds.add(String(id));
+  selectedCard = null;
+  document.getElementById('detailPanel').classList.remove('visible');
+  renderResults();
+}
+
+function restoreRejected() {
+  rejectedIds.clear();
+  renderResults();
+}
+
+// ── BUSCAR POR ID EN RESULTADOS ACTUALES ──────────────────────────────
+// ── MODO EVALUACIÓN ────────────────────────────────────────────────────
+// Cuando el usuario pone un ID esperado, al buscar se registra en qué puesto
+// quedó ese ID dentro de los resultados. El histórico vive en memoria.
+
+function getExpectedId() {
+  const raw = document.getElementById('expectedId').value.trim();
+  if (!raw) return null;
+  const n = parseInt(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Cambiar el texto del botón según haya o no ID esperado
+document.getElementById('expectedId').addEventListener('input', () => {
+  const lbl = document.getElementById('searchBtnLabel');
+  if (!lbl) return;
+  lbl.textContent = getExpectedId() !== null
+    ? 'Identificar y registrar'
+    : 'Identificar conector';
+});
+
+function recordEvaluation(expectedId, data) {
+  // Buscar el puesto del expectedId en currentResults (ya ordenados por similitud)
+  const ordered = [...currentResults].sort((a,b) => b.score - a.score);
+  const pos = ordered.findIndex(r => String(r.id) === String(expectedId));
+  const puesto = pos === -1 ? null : pos + 1;
+  const sim = pos === -1 ? null : ordered[pos].score;
+
+  const filtrosTxt = [
+    document.getElementById('filterForma').value || null,
+    document.getElementById('filterPines').value ? document.getElementById('filterPines').value + 'p' : null,
+    document.getElementById('filterTipoMH').value || null,
+  ].filter(Boolean).join(' · ') || '—';
+
+  evalHistory.push({
+    hora: new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit'}),
+    idReal: expectedId,
+    puesto: puesto,
+    similitud: sim,
+    filtros: filtrosTxt,
+    nImgs: data.n_imagenes || 1,
+    nCandidatos: data.n_candidatos || 0,
+  });
+
+  renderEvalPanel();
+  showEvalBanner(expectedId, puesto, sim, data.n_candidatos);
+}
+
+function showEvalBanner(expectedId, puesto, sim, nCand) {
+  const banner = document.getElementById('evalBanner');
+  const txt = document.getElementById('evalBannerText');
+  if (puesto === null) {
+    txt.innerHTML = `ID <strong>${expectedId}</strong> NO aparece en los ${currentResults.length} resultados (de ${nCand} candidatos). Prueba a relajar filtros o aumentar Nº de resultados.`;
+    banner.style.borderColor = 'var(--red-tint-border)';
+    banner.style.background = 'var(--red-tint-soft)';
+  } else {
+    const tone = puesto <= 3 ? 'var(--green)' : (puesto <= 12 ? 'var(--accent)' : 'var(--orange)');
+    txt.innerHTML = `ID <strong>${expectedId}</strong> en puesto <strong style="color:${tone}">#${puesto}</strong> de ${nCand} candidatos · similitud ${(sim*100).toFixed(1)}%  ·  registrado ✓`;
+    banner.style.borderColor = 'var(--accent-tint-border)';
+    banner.style.background = 'var(--accent-tint-medium)';
+  }
+  banner.style.display = '';
+}
+
+function renderEvalPanel() {
+  const panel = document.getElementById('evalPanel');
+  if (evalHistory.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+
+  // Stats
+  const total = evalHistory.length;
+  const withPos = evalHistory.filter(e => e.puesto !== null);
+  const top3 = withPos.filter(e => e.puesto <= 3).length;
+  const top12 = withPos.filter(e => e.puesto <= 12).length;
+  const avg = withPos.length
+    ? (withPos.reduce((s,e) => s + e.puesto, 0) / withPos.length).toFixed(1)
+    : '—';
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statTop3').textContent = `${top3}/${total}`;
+  document.getElementById('statTop12').textContent = `${top12}/${total}`;
+  document.getElementById('statAvg').textContent = avg;
+
+  // Tabla (más reciente primero)
+  const tbody = document.getElementById('evalTableBody');
+  tbody.innerHTML = '';
+  [...evalHistory].reverse().forEach(e => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    const puestoCell = e.puesto === null
+      ? `<span style="color:var(--red)">fuera</span>`
+      : `<span style="color:${e.puesto<=3?'var(--green)':(e.puesto<=12?'var(--accent)':'var(--orange)')}; font-weight:500">#${e.puesto}</span>`;
+    const simCell = e.similitud === null ? '—' : (e.similitud*100).toFixed(1) + '%';
+    tr.innerHTML = `
+      <td style="padding:6px 8px; color:var(--text3)">${e.hora}</td>
+      <td style="padding:6px 8px">${e.idReal}</td>
+      <td style="padding:6px 8px">${puestoCell}</td>
+      <td style="padding:6px 8px; color:var(--text2)">${simCell}</td>
+      <td style="padding:6px 8px; color:var(--text2)">${e.filtros}</td>
+      <td style="padding:6px 8px; color:var(--text2)">${e.nImgs}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function clearEvalHistory() {
+  if (!evalHistory.length) return;
+  if (!confirm(`¿Borrar el histórico de ${evalHistory.length} pruebas?`)) return;
+  evalHistory = [];
+  renderEvalPanel();
+  document.getElementById('evalBanner').style.display = 'none';
+}
+
+function lookupRank() {
+  const input = document.getElementById('rankLookup');
+  const raw = input.value.trim();
+  if (!raw) return;
+  const targetId = String(parseInt(raw));
+  if (!currentResults.length) {
+    showToast('Primero haz una búsqueda', 'info');
+    return;
+  }
+  // Ordenar por similitud para calcular el puesto "real" del ranking
+  const sortedBySim = [...currentResults].sort((a, b) => b.score - a.score);
+  const pos = sortedBySim.findIndex(c => c.id === targetId);
+  if (pos === -1) {
+    showToast(`ID ${targetId} NO está en los ${currentResults.length} resultados`, 'info');
+    return;
+  }
+  const hit = sortedBySim[pos];
+  showToast(`ID ${targetId} está en el puesto #${pos+1} (sim ${(hit.score*100).toFixed(1)}%)`, 'success');
+  // Abrir el detalle si la tarjeta está renderizada
+  const card = document.querySelector(`.result-card[data-id="${targetId}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    openDetail(hit, card);
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function placeholderSVG(forma) {
+  const colors = { Redondo: '#4d9fff', Cuadrado: '#ff4d9f', Varios: '#aa4dff', '': '#555a68' };
+  const c = colors[forma] || '#555a68';
+  if (forma === 'Redondo') {
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><circle cx='40' cy='40' r='28' fill='none' stroke='${c}' stroke-width='2' opacity='0.5'/><circle cx='30' cy='40' r='4' fill='${c}' opacity='0.7'/><circle cx='40' cy='40' r='4' fill='${c}' opacity='0.7'/><circle cx='50' cy='40' r='4' fill='${c}' opacity='0.7'/></svg>`)}`;
+  }
+  if (forma === 'Cuadrado') {
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect x='16' y='24' width='48' height='32' rx='4' fill='none' stroke='${c}' stroke-width='2' opacity='0.5'/><rect x='26' y='34' width='8' height='12' rx='2' fill='${c}' opacity='0.7'/><rect x='46' y='34' width='8' height='12' rx='2' fill='${c}' opacity='0.7'/></svg>`)}`;
+  }
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect x='20' y='28' width='40' height='24' rx='3' fill='none' stroke='${c}' stroke-width='2' opacity='0.4'/><circle cx='30' cy='40' r='3' fill='${c}' opacity='0.6'/><circle cx='40' cy='40' r='3' fill='${c}' opacity='0.6'/><circle cx='50' cy='40' r='3' fill='${c}' opacity='0.6'/></svg>`)}`;
+}
+
+function resetResults() {
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('emptyState').style.display = '';
+  document.getElementById('detailPanel').classList.remove('visible');
+  document.getElementById('resultsGrid').innerHTML = '';
+  const banner = document.getElementById('evalBanner');
+  if (banner) banner.style.display = 'none';
+  const rejBar = document.getElementById('rejectedBar');
+  if (rejBar) rejBar.remove();
+  currentResults = [];
+  selectedCard = null;
+  rejectedIds.clear();
+}
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  toast.className = 'toast ' + type;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
