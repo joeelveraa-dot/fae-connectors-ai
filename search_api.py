@@ -165,23 +165,23 @@ async def lifespan(app: FastAPI):
     model_l = None
     preprocess_l = None
     embeddings_l = None
-    if EMBEDDINGS_L_FILE.exists():
-        print("Cargando modelo CLIP ViT-L (re-ranking preciso)...")
-        model_l, _, preprocess_l = open_clip.create_model_and_transforms(
-            MODEL_L_NAME, pretrained=MODEL_L_PRETRAINED
-        )
-        model_l = model_l.to(device).eval()
-        data_l = np.load(EMBEDDINGS_L_FILE)
-        embeddings_l = data_l["embeddings"]
-        ids_l = data_l["ids"]
-        if not np.array_equal(ids, ids_l):
-            print("  ⚠  IDs de B y L no coinciden; se ignora L para evitar errores")
-            model_l = None
-            embeddings_l = None
-        else:
-            print(f"  embeddings_l: {embeddings_l.shape}")
-    else:
-        print(f"  (sin ViT-L; genera embeddings_l.npz si quieres re-ranking)")
+    #if EMBEDDINGS_L_FILE.exists():
+     #   print("Cargando modelo CLIP ViT-L (re-ranking preciso)...")
+       # model_l, _, preprocess_l = open_clip.create_model_and_transforms(
+        #    MODEL_L_NAME, pretrained=MODEL_L_PRETRAINED
+        #)
+        #model_l = model_l.to(device).eval()
+        #data_l = np.load(EMBEDDINGS_L_FILE)
+        #embeddings_l = data_l["embeddings"]
+        #ids_l = data_l["ids"]
+        #if not np.array_equal(ids, ids_l):
+            #print("  ⚠  IDs de B y L no coinciden; se ignora L para evitar errores")
+            #model_l = None
+            #embeddings_l = None
+        #else:
+            #print(f"  embeddings_l: {embeddings_l.shape}")
+    #else:
+        #print(f"  (sin ViT-L; genera embeddings_l.npz si quieres re-ranking)")
 
     meta = pd.read_pickle(META_FILE)
     id_to_idx = {int(cid): i for i, cid in enumerate(ids)}
