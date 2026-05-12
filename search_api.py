@@ -35,7 +35,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
-from rembg import remove, new_session
+#from rembg import remove, new_session
 
 # --------------------------------------------------------------------------
 # CONFIG
@@ -60,7 +60,7 @@ MODEL_L_PRETRAINED = "laion2b_s32b_b82k"
 DEFAULT_TOP_K = 12
 RERANK_SHORTLIST = 30     # cuántos candidatos saca ViT-B para que re-rankee ViT-L
 
-REMBG_MODEL = "u2netp"
+#REMBG_MODEL = "u2netp"
 
 
 # --------------------------------------------------------------------------
@@ -189,8 +189,8 @@ async def lifespan(app: FastAPI):
     print("Preparando cache de imágenes...")
     build_image_cache()
 
-    print(f"Cargando modelo rembg ({REMBG_MODEL})...")
-    rembg_session = new_session(REMBG_MODEL)
+    #print(f"Cargando modelo rembg ({REMBG_MODEL})...")
+    #rembg_session = new_session(REMBG_MODEL)
 
     STATE.update(
         model_b=model_b,
@@ -203,7 +203,7 @@ async def lifespan(app: FastAPI):
         ids=ids,
         id_to_idx=id_to_idx,
         meta=meta,
-        rembg_session=rembg_session,
+        #rembg_session=rembg_session,
         has_rerank=(model_l is not None),
     )
     modo = "B+L (re-ranking)" if model_l is not None else "B (rápido)"
@@ -270,25 +270,8 @@ def _to_square_white(pil_img: Image.Image, size: int = 224) -> Image.Image:
     return square.resize((size, size), Image.LANCZOS)
 
 
-def preprocess_photo(pil_img: Image.Image) -> tuple[Image.Image, str]:
-    """
-    Devuelve (imagen_224x224, modo) donde modo ∈ {'foto', 'dibujo'}.
-    - foto:    rembg + recorte + fondo blanco + cuadrado 224
-    - dibujo:  saltamos rembg (lo estropearía); solo cuadrado 224
-    """
-    if is_line_drawing(pil_img):
-        return _to_square_white(pil_img), "dibujo"
-
-    out = remove(pil_img, session=STATE["rembg_session"])
-    alpha = out.split()[-1]
-    bbox = alpha.getbbox()
-    if bbox is None:
-        return _to_square_white(pil_img), "foto_sin_recorte"
-
-    cropped = out.crop(bbox)
-    white = Image.new("RGB", cropped.size, (255, 255, 255))
-    white.paste(cropped, mask=cropped.split()[-1])
-    return _to_square_white(white), "foto"
+def preprocess_photo(pil_img: Image.Image):
+    return _to_square_white(pil_img), "simple"
 
 
 def _embed_with(pil_img: Image.Image, model, preprocess) -> np.ndarray:

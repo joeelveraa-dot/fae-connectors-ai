@@ -1,11 +1,7 @@
-venv/
-.venv/
 __pycache__/
-
+.venv/
 img_cache/
-
-*.pyc
-*.pyo
-*.pyd
-
-.env
+imagenes_originales/
+*.pkl
+*.xlsx
+embeddings_l.npz
