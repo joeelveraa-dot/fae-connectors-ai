@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.git/
+
+img_cache/
+imagenes_originales/
+
+*.npz
+*.pkl
+*.xlsx
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+
+output.tar.zst
