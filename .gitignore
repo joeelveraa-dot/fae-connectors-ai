@@ -1,7 +1,9 @@
 __pycache__/
 .venv/
+
+embeddings_*.npz
+*.pkl
 img_cache/
 imagenes_originales/
-*.pkl
+
 *.xlsx
-embeddings_l.npz
