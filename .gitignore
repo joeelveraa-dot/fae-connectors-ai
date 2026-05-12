@@ -6,3 +6,13 @@ embeddings_*.npz
 img_cache/
 imagenes_originales/
 *.xlsx
+*.pt
+*.bin
+*.cache
+embeddings_b.npz
+embeddings_l.npz
+*.pkl
+*.xlsx
+
+img_cache/
+imagenes_originales/
