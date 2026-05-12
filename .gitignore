@@ -5,5 +5,4 @@ embeddings_*.npz
 *.pkl
 img_cache/
 imagenes_originales/
-
 *.xlsx
