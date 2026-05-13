@@ -4,13 +4,10 @@ __pycache__/
 imagenes_originales/
 img_cache/
 
-*.npz
-*.pkl
-*.xlsx
 *.bin
 *.cache
 
-catalogo_meta.pkl
 catalogo_meta.backup.pkl
-embeddings_b.npz
-embeddings_l.npz
+conector_prueba.jpg
+test_img.png
+test_sanity.py
