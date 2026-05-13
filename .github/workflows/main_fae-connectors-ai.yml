@@ -18,9 +18,24 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Create deployment package
+        run: |
+          zip -r release.zip . \
+            -x "*.git*" \
+            -x "*__pycache__*" \
+            -x "*.venv*" \
+            -x "*imagenes_originales*" \
+            -x "*img_cache*" \
+            -x "*.npz" \
+            -x "*.pkl" \
+            -x "*.xlsx" \
+            -x "*.bin" \
+            -x "*.cache"
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'fae-connectors-ai'
           slot-name: 'Production'
+          package: release.zip
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A52824EF3E604753B40A2C1887CCA3E3 }}
