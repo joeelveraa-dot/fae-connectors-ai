@@ -26,11 +26,11 @@ jobs:
             -x "*.venv*" \
             -x "*imagenes_originales*" \
             -x "*img_cache*" \
-            -x "*.npz" \
-            -x "*.pkl" \
-            -x "*.xlsx" \
             -x "*.bin" \
-            -x "*.cache"
+            -x "*.cache" \
+            -x "catalogo_meta.backup.pkl" \
+            -x "conector_prueba.jpg" \
+            -x "test_img.png"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
