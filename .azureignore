@@ -1,17 +1,16 @@
 .venv/
 __pycache__/
-.git/
 
-img_cache/
 imagenes_originales/
+img_cache/
 
 *.npz
 *.pkl
 *.xlsx
-*.jpg
-*.jpeg
-*.png
-*.webp
-*.bmp
+*.bin
+*.cache
 
-output.tar.zst
+catalogo_meta.pkl
+catalogo_meta.backup.pkl
+embeddings_b.npz
+embeddings_l.npz
