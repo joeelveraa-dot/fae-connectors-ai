@@ -213,7 +213,16 @@ async def lifespan(app: FastAPI):
     STATE.clear()
 
 
-app = FastAPI(title="FAE Conector Visual Search v3.1", lifespan=lifespan)
+app = FastAPI(
+    title="FAE Conector Visual Search v3.1",
+    lifespan=lifespan,
+    servers=[
+        {
+            "url": "https://copilot-fae-c0d4huf8hsd7ghbt.westeurope-01.azurewebsites.net",
+            "description": "Production"
+        }
+    ]
+)
 
 # CORS abierto (solo uso interno en local)
 app.add_middleware(
