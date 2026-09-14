@@ -461,6 +461,176 @@
     letter-spacing: 0.02em;
   }
 
+  /* BOTÓN REGISTRAR CONECTOR NUEVO */
+  .btn-register {
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-register svg { width: 14px; height: 14px; }
+  .btn-register:hover {
+    border-color: var(--accent-sec);
+    color: var(--accent-sec);
+    background: rgba(102, 204, 216, 0.06);
+  }
+
+  /* MODAL: REGISTRAR CONECTOR NUEVO */
+  .register-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(14,15,17,0.72);
+    z-index: 60;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    padding: 24px;
+  }
+  .register-mask.visible { display: flex; }
+
+  .register-modal {
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .register-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .register-modal-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .register-modal-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .register-upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .register-upload-zone:hover { border-color: var(--accent-sec); }
+  .register-upload-zone.dragover { border-color: var(--accent-sec); background: rgba(102,204,216,0.06); }
+
+  .register-upload-zone img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 10px;
+    display: none;
+    background: var(--surface2);
+  }
+  .register-upload-zone.has-image img { display: block; }
+  .register-upload-zone.has-image .register-upload-placeholder { display: none; }
+
+  .register-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text3);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .register-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .register-field { display: flex; flex-direction: column; gap: 6px; }
+  .register-field.full { grid-column: 1 / -1; }
+
+  .register-field label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .register-field input,
+  .register-field select,
+  .register-field textarea {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 9px 11px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .register-field select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23555a68' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  .register-field textarea { resize: none; height: 64px; font-family: 'DM Sans', sans-serif; }
+  .register-field input:focus,
+  .register-field select:focus,
+  .register-field textarea:focus { border-color: var(--accent-sec); }
+
+  .register-modal-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px 24px 22px;
+    border-top: 1px solid var(--border);
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+  }
+
   /* SEARCH BUTTON */
   .btn-search {
     width: 100%;
@@ -1045,6 +1215,14 @@
       <div class="id-lookup-hint">Si ya conoces el conector, ve directo sin subir foto</div>
     </div>
 
+    <!-- Registrar conector nuevo (si no está en el catálogo) -->
+    <button type="button" class="btn-register" id="openRegisterBtn" onclick="openRegisterModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Registrar conector nuevo
+    </button>
+
     <!-- Calidad imagen -->
     <div class="quality-bar" id="qualityBar">
       <div class="quality-row">
@@ -1335,6 +1513,104 @@
       <path d="M8 28h24" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
     </svg>
     <p>suelta la imagen aquí</p>
+  </div>
+</div>
+
+<!-- Modal: Registrar conector nuevo -->
+<div class="register-mask" id="registerMask">
+  <div class="register-modal">
+    <div class="register-modal-header">
+      <div class="register-modal-title">Registrar conector nuevo</div>
+      <button class="detail-close" onclick="closeRegisterModal()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="register-modal-body">
+      <div class="register-upload-zone" id="regUploadZone">
+        <img id="regPreviewImg" src="" alt="preview">
+        <div class="register-upload-placeholder">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+          <p>Foto del conector nuevo<br>(obligatoria)</p>
+        </div>
+      </div>
+      <input type="file" id="regFileInput" accept="image/*" style="display:none">
+
+      <div class="register-fields-grid">
+        <div class="register-field">
+          <label>Referencia FAE</label>
+          <input type="text" id="regRefFae" placeholder="Ej: 311160">
+        </div>
+        <div class="register-field">
+          <label>Referencia Comercial</label>
+          <input type="text" id="regRefComercial" placeholder="Ref. del proveedor">
+        </div>
+        <div class="register-field">
+          <label>Forma</label>
+          <select id="regForma">
+            <option value="">—</option>
+            <option value="Redondo">Redondo</option>
+            <option value="Cuadrado">Cuadrado</option>
+            <option value="Varios">Varios</option>
+            <option value="Borne/Terminal">Borne / Terminal</option>
+          </select>
+        </div>
+        <div class="register-field">
+          <label>Terminales</label>
+          <input type="number" id="regTerminales" min="1" placeholder="Nº de pines">
+        </div>
+        <div class="register-field">
+          <label>Tipo (M/H)</label>
+          <select id="regTipoMH">
+            <option value="">—</option>
+            <option value="Macho">Macho</option>
+            <option value="Hembra">Hembra</option>
+          </select>
+        </div>
+        <div class="register-field">
+          <label>Es de FAE</label>
+          <select id="regEsFae">
+            <option value="Sí">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        <div class="register-field">
+          <label>Proveedor</label>
+          <input type="text" id="regProveedor" placeholder="Fabricante / proveedor">
+        </div>
+        <div class="register-field">
+          <label>Colores</label>
+          <input type="text" id="regColores" placeholder="Ej: Negro">
+        </div>
+        <div class="register-field">
+          <label>Contraconector</label>
+          <input type="text" id="regContra" placeholder="Referencia del contraconector">
+        </div>
+        <div class="register-field">
+          <label>ID Contraconector</label>
+          <input type="text" id="regIdContra" placeholder="ID en el catálogo">
+        </div>
+        <div class="register-field">
+          <label>Precio unitario (€)</label>
+          <input type="number" id="regPrecio" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="register-field full">
+          <label>Descripción</label>
+          <textarea id="regDescripcion" placeholder="Notas adicionales sobre el conector"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="register-modal-actions">
+      <button class="btn-reject" onclick="closeRegisterModal()">Cancelar</button>
+      <button class="btn-confirm" id="regSubmitBtn" onclick="submitRegister()">Guardar conector</button>
+    </div>
   </div>
 </div>
 
@@ -2134,6 +2410,120 @@ function resetResults() {
   currentResults = [];
   selectedCard = null;
   rejectedIds.clear();
+}
+
+// ── REGISTRAR CONECTOR NUEVO ─────────────────────────────────────────
+let regFile = null;
+
+const regUploadZone = document.getElementById('regUploadZone');
+const regFileInput  = document.getElementById('regFileInput');
+const regPreviewImg = document.getElementById('regPreviewImg');
+
+if (regUploadZone) {
+  regUploadZone.addEventListener('click', () => regFileInput.click());
+  regFileInput.addEventListener('change', e => setRegFile(e.target.files[0]));
+  regUploadZone.addEventListener('dragover', e => { e.preventDefault(); regUploadZone.classList.add('dragover'); });
+  regUploadZone.addEventListener('dragleave', () => regUploadZone.classList.remove('dragover'));
+  regUploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    regUploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) setRegFile(e.dataTransfer.files[0]);
+  });
+}
+
+function setRegFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('Solo se aceptan imágenes', 'info');
+    return;
+  }
+  regFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    regPreviewImg.src = e.target.result;
+    regUploadZone.classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+}
+
+function openRegisterModal() {
+  document.getElementById('registerMask').classList.add('visible');
+}
+
+function closeRegisterModal() {
+  document.getElementById('registerMask').classList.remove('visible');
+  resetRegisterForm();
+}
+
+function resetRegisterForm() {
+  regFile = null;
+  regFileInput.value = '';
+  regPreviewImg.src = '';
+  regUploadZone.classList.remove('has-image');
+  ['regRefFae','regRefComercial','regTerminales','regProveedor','regColores',
+   'regContra','regIdContra','regPrecio','regDescripcion'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('regForma').value = '';
+  document.getElementById('regTipoMH').value = '';
+  document.getElementById('regEsFae').value = 'Sí';
+}
+
+async function submitRegister() {
+  if (!regFile) {
+    showToast('Añade una foto del conector', 'info');
+    return;
+  }
+  const btn = document.getElementById('regSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    const fd = new FormData();
+    fd.append('file', regFile);
+    const fields = {
+      referencia_fae: 'regRefFae',
+      referencia_comercial: 'regRefComercial',
+      proveedor: 'regProveedor',
+      descripcion: 'regDescripcion',
+      terminales: 'regTerminales',
+      forma: 'regForma',
+      tipo_mh: 'regTipoMH',
+      colores: 'regColores',
+      precio: 'regPrecio',
+      contraconector: 'regContra',
+      id_contraconector: 'regIdContra',
+      es_de_fae: 'regEsFae',
+    };
+    for (const [key, elId] of Object.entries(fields)) {
+      const val = document.getElementById(elId).value;
+      if (val !== '') fd.append(key, val);
+    }
+
+    const r = await fetch(`${API_BASE}/registrar`, { method: 'POST', body: fd });
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`HTTP ${r.status}: ${err}`);
+    }
+    const data = await r.json();
+    showToast(data.mensaje || `Conector #${data.id_conector} registrado`, 'success');
+    closeRegisterModal();
+
+    // Refrescar contador de conectores y dropdowns de filtros
+    try {
+      const h = await (await fetch(`${API_BASE}/health`)).json();
+      const span = document.querySelector('.header-right span');
+      if (span) {
+        const modelTxt = h.has_rerank ? 'B+L' : 'B';
+        span.textContent = `BD: ${h.conectores} conectores · ${h.device} · ${modelTxt}`;
+      }
+    } catch (e) { /* no crítico */ }
+  } catch (e) {
+    showToast('Error al registrar: ' + e.message, 'info');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar conector';
+  }
 }
 
 let toastTimer;

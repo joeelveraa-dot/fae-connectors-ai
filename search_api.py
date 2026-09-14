@@ -19,12 +19,15 @@ Endpoints:
     GET  /filtros                -> valores posibles de cada filtro
     POST /search                 -> form-data: file, top_k, terminales?, forma?, tipo_mh?, debug?
     GET  /imagen/{id}            -> PNG real del conector extraído del Excel
+    POST /registrar               -> form-data: file, referencia_fae?, forma?, terminales?, ...
+                                      registra un conector nuevo (foto + metadatos + embedding)
 """
 
 from pathlib import Path
 from contextlib import asynccontextmanager
 import io
 import base64
+import shutil
 from typing import Optional, List
 import numpy as np
 import pandas as pd
@@ -207,8 +210,8 @@ async def lifespan(app: FastAPI):
         has_rerank=(model_l is not None),
     )
     modo = "B+L (re-ranking)" if model_l is not None else "B (rápido)"
-    print(f"✓ {len(ids)} conectores cargados · modo: {modo} · device: {device}")
-    print(f"✓ abre http://localhost:8000 en el navegador")
+    print(f"OK: {len(ids)} conectores cargados - modo: {modo} - device: {device}")
+    print("OK: abre http://localhost:8000 en el navegador")
     yield
     STATE.clear()
 
@@ -478,7 +481,98 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
         "similares": similares,
         "n_similares": len(similares),
     })
-    
+
+
+@app.post("/registrar")
+async def registrar_conector(
+    file: UploadFile = File(...),
+    referencia_fae: Optional[str] = Form(None),
+    referencia_comercial: Optional[str] = Form(None),
+    proveedor: Optional[str] = Form(None),
+    descripcion: Optional[str] = Form(None),
+    terminales: Optional[int] = Form(None),
+    forma: Optional[str] = Form(None),
+    tipo_mh: Optional[str] = Form(None),
+    colores: Optional[str] = Form(None),
+    precio: Optional[float] = Form(None),
+    contraconector: Optional[str] = Form(None),
+    id_contraconector: Optional[str] = Form(None),
+    es_de_fae: Optional[str] = Form(None),
+):
+    """
+    Registra un conector que todavía no está en el catálogo: guarda su foto,
+    calcula su embedding CLIP y añade una fila a los metadatos, en caliente
+    (sin reiniciar el servidor), para que sea buscable inmediatamente.
+    """
+    try:
+        raw = await file.read()
+        pil = Image.open(io.BytesIO(raw)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(400, f"Imagen inválida: {e}")
+
+    ids = STATE["ids"]
+    meta = STATE["meta"]
+    new_id = int(max(
+        int(ids.max()) if len(ids) else 0,
+        int(meta["ID - Conector catálogo"].max()) if len(meta) else 0,
+    )) + 1
+
+    # 1) Guardar imagen original (fuente para futuros build_embeddings.py)
+    IMG_ORIG_DIR.mkdir(exist_ok=True)
+    pil.save(IMG_ORIG_DIR / f"{new_id}.png", format="PNG")
+
+    # 2) Cache para que /imagen/{id} la sirva ya mismo
+    IMG_CACHE_DIR.mkdir(exist_ok=True)
+    pil.save(IMG_CACHE_DIR / f"{new_id}.png", format="PNG", optimize=True)
+
+    # 3) Embedding ViT-B, mismo preprocesado que el resto del catálogo
+    #    (imagen tal cual, sin el recuadro blanco que se usa solo para queries)
+    tensor = STATE["preprocess_b"](pil).unsqueeze(0).to(STATE["device"])
+    with torch.no_grad():
+        feats = STATE["model_b"].encode_image(tensor)
+        feats = feats / feats.norm(dim=-1, keepdim=True)
+    new_emb = feats.cpu().numpy()[0].astype(np.float32)
+
+    embeddings_b = np.vstack([STATE["embeddings_b"], new_emb[None, :]])
+    new_ids = np.append(ids, np.int64(new_id))
+    np.savez_compressed(EMBEDDINGS_B_FILE, embeddings=embeddings_b, ids=new_ids)
+    STATE["embeddings_b"] = embeddings_b
+    STATE["ids"] = new_ids
+    STATE["id_to_idx"][new_id] = len(new_ids) - 1
+
+    # 4) Fila de metadatos
+    new_row = {
+        "ID - Conector catálogo": new_id,
+        "Imagen": None,
+        "Contraconector": contraconector,
+        "ID Contraconector": id_contraconector,
+        "Referencia FAE": referencia_fae,
+        "Conector aereo": None,
+        "Terminales": float(terminales) if terminales is not None else None,
+        "Formas": forma,
+        "Es de FAE": es_de_fae or "Sí",
+        "Referencia Comercial": referencia_comercial,
+        "Proveedor": proveedor,
+        "Descripción": descripcion,
+        "Tipo (M/H)": tipo_mh,
+        "Colores": colores,
+        "Precio unitario (€)": precio,
+    }
+    new_row = {k: v for k, v in new_row.items() if k in meta.columns}
+    meta_updated = pd.concat([meta, pd.DataFrame([new_row])], ignore_index=True)
+
+    if META_FILE.exists():
+        shutil.copy(META_FILE, HERE / "catalogo_meta.backup.pkl")
+    meta_updated.to_pickle(META_FILE)
+    STATE["meta"] = meta_updated
+
+    return JSONResponse({
+        "ok": True,
+        "id_conector": new_id,
+        "mensaje": f"Conector #{new_id} registrado correctamente.",
+    })
+
+
 @app.post("/search")
 async def search(
     files: List[UploadFile] = File(...),    # acepta 1..N imágenes bajo el nombre 'files'
