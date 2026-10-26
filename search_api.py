@@ -21,13 +21,18 @@ Endpoints:
     GET  /imagen/{id}            -> PNG real del conector extraído del Excel
     POST /registrar               -> form-data: file, referencia_fae?, forma?, terminales?, ...
                                       registra un conector nuevo (foto + metadatos + embedding)
+    POST /editar_conector         -> form-data: id_conector, file?, referencia_fae?, ...
+                                      edita un conector existente y sincroniza el Excel real
 """
 
 from pathlib import Path
 from contextlib import asynccontextmanager
 import io
 import base64
+import re
 import shutil
+import zipfile
+import xml.etree.ElementTree as ET
 from typing import Optional, List
 import numpy as np
 import pandas as pd
@@ -35,6 +40,15 @@ from PIL import Image
 import torch
 import open_clip
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+
+try:
+    import win32com.client as win32com_client
+    import pywintypes
+    EXCEL_COM_AVAILABLE = True
+except ImportError:
+    win32com_client = None
+    pywintypes = None
+    EXCEL_COM_AVAILABLE = False
 from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
@@ -50,7 +64,14 @@ EMBEDDINGS_B_FILE = HERE / "embeddings_b.npz"
 EMBEDDINGS_L_FILE = HERE / "embeddings_l.npz"
 EMBEDDINGS_LEGACY = HERE / "embeddings.npz"
 META_FILE = HERE / "catalogo_meta.pkl"
-EXCEL_FILE = HERE / "catalogo_conectores_completo.xlsx"
+# El Excel "fuente de verdad" vive en la carpeta de OneDrive del usuario
+# (se sincroniza sola con SharePoint); así cualquier alta/edición desde la
+# app se sube automáticamente. Si esa ruta no existe (p.ej. otra máquina sin
+# ese OneDrive), se cae a la copia local del proyecto.
+_EXCEL_ONEDRIVE = Path(
+    r"C:\Users\jnunezv\OneDrive - FRANCISCO ALBERO S.A.U\Documentos\catalogo_conectores_completo.xlsx"
+)
+EXCEL_FILE = _EXCEL_ONEDRIVE if _EXCEL_ONEDRIVE.exists() else HERE / "catalogo_conectores_completo.xlsx"
 SHEET_NAME = "Catálogo Conectores"
 INDEX_HTML = HERE / "index.html"
 IMG_CACHE_DIR = HERE / "img_cache"
@@ -81,18 +102,231 @@ def _original_for(cid: int) -> Path | None:
     return None
 
 
+_OOXML_NS = {
+    "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+    "xlrd": "http://schemas.microsoft.com/office/spreadsheetml/2017/richdata",
+}
+_OOXML_R_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+
+
+def _resolve_sheet_xml_path(zf: "zipfile.ZipFile", sheet_name: str) -> str:
+    wb_xml = ET.fromstring(zf.read("xl/workbook.xml"))
+    rels_xml = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+    rid_to_target = {rel.get("Id"): rel.get("Target") for rel in rels_xml}
+    for sheet in wb_xml.find("m:sheets", _OOXML_NS):
+        if sheet.get("name") == sheet_name:
+            target = rid_to_target[sheet.get(f"{_OOXML_R_NS}id")]
+            return target if target.startswith("xl/") else "xl/" + target
+    raise ValueError(f"Hoja no encontrada: {sheet_name}")
+
+
+def extract_foto_column_photos(excel_path: Path, sheet_name: str, foto_col_letter: str) -> dict:
+    """
+    Extrae las fotos insertadas "en celda" (función moderna de Excel 365,
+    Insertar > Imágenes > Colocar en celda) de la columna `foto_col_letter`.
+    openpyxl no soporta este tipo de dato (Rich Value / xl/richData), así que
+    hay que leer el XML interno del .xlsx directamente.
+
+    Devuelve {id_conector: bytes_imagen}. Si el archivo no usa esta función
+    de Excel, devuelve {} sin fallar.
+    """
+    try:
+        zf = zipfile.ZipFile(excel_path)
+        names = set(zf.namelist())
+        required = {
+            "xl/metadata.xml", "xl/richData/rdrichvalue.xml",
+            "xl/richData/richValueRel.xml", "xl/richData/_rels/richValueRel.xml.rels",
+        }
+        if not required.issubset(names):
+            return {}
+
+        sheet_xml_path = _resolve_sheet_xml_path(zf, sheet_name)
+
+        meta_root = ET.fromstring(zf.read("xl/metadata.xml"))
+        vm_to_v = [
+            int(bk.find("m:rc", _OOXML_NS).get("v"))
+            for bk in meta_root.find("m:valueMetadata", _OOXML_NS).findall("m:bk", _OOXML_NS)
+        ]
+        future_meta = next(
+            fm for fm in meta_root.findall("m:futureMetadata", _OOXML_NS)
+            if fm.get("name") == "XLRICHVALUE"
+        )
+        fm_to_rvidx = [
+            int(bk.find(".//xlrd:rvb", _OOXML_NS).get("i"))
+            for bk in future_meta.findall("m:bk", _OOXML_NS)
+        ]
+
+        rv_root = ET.fromstring(zf.read("xl/richData/rdrichvalue.xml"))
+        rv_list = [int(rv.findall("xlrd:v", _OOXML_NS)[0].text) for rv in rv_root.findall("xlrd:rv", _OOXML_NS)]
+
+        rvrel_root = ET.fromstring(zf.read("xl/richData/richValueRel.xml"))
+        rel_ids = [rel.get(f"{_OOXML_R_NS}id") for rel in rvrel_root]
+
+        rels_root = ET.fromstring(zf.read("xl/richData/_rels/richValueRel.xml.rels"))
+        rid_to_target = {rel.get("Id"): rel.get("Target") for rel in rels_root}
+
+        def vm_to_media(vm: int) -> str:
+            v = vm_to_v[vm - 1]
+            idx_in_rel = rv_list[fm_to_rvidx[v]]
+            return rid_to_target[rel_ids[idx_in_rel]]
+
+        sheet_xml = zf.read(sheet_xml_path).decode("utf-8")
+        row_to_vm = {
+            int(m.group(1)): int(m.group(2))
+            for m in re.finditer(rf'<c r="{foto_col_letter}(\d+)"[^>]*\bvm="(\d+)"', sheet_xml)
+        }
+        if not row_to_vm:
+            return {}
+
+        wb = load_workbook(excel_path, data_only=True)
+        ws = wb[sheet_name]
+
+        out = {}
+        for row, vm in row_to_vm.items():
+            cid = ws.cell(row=row, column=1).value
+            if cid is None:
+                continue
+            try:
+                media_target = vm_to_media(vm)
+            except (IndexError, KeyError):
+                continue
+            media_path = "xl/" + media_target.replace("../", "")
+            try:
+                out[int(cid)] = zf.read(media_path)
+            except KeyError:
+                continue
+        return out
+    except Exception as e:
+        print(f"  ! extract_foto_column_photos: {e}")
+        return {}
+
+
+def write_fields_to_excel(
+    excel_path: Path,
+    sheet_name: str,
+    id_conector: int,
+    field_updates: dict,
+    create_if_missing: bool = False,
+) -> tuple[bool, str]:
+    """
+    Escribe cambios de campos en el Excel real para la fila de `id_conector`,
+    usando Excel vía COM (nunca openpyxl: este archivo usa "imagen en celda"
+    / richData en la columna Foto, que openpyxl destruye al volver a guardar).
+
+    Si `create_if_missing` es True y el ID no existe todavía, añade una fila
+    nueva al final de los datos (usado al registrar un conector nuevo).
+
+    Si Excel ya tiene el archivo abierto, reutiliza esa misma ventana en vez
+    de abrir una segunda copia (y no la cierra al terminar). Si no, lanza una
+    instancia oculta, la cierra al terminar.
+
+    Devuelve (ok, mensaje).
+    """
+    if not EXCEL_COM_AVAILABLE:
+        return False, "Automatización de Excel no disponible en este servidor"
+
+    excel_path_str = str(excel_path.resolve())
+    excel = None
+    wb = None
+    we_launched_excel = False
+    we_opened_wb = False
+
+    try:
+        try:
+            excel = win32com_client.GetActiveObject("Excel.Application")
+            for open_wb in excel.Workbooks:
+                if open_wb.FullName.lower() == excel_path_str.lower():
+                    wb = open_wb
+                    break
+        except Exception:
+            excel = None
+
+        if excel is None:
+            excel = win32com_client.gencache.EnsureDispatch("Excel.Application")
+            excel.Visible = False
+            we_launched_excel = True
+
+        if wb is None:
+            excel.DisplayAlerts = False
+            wb = excel.Workbooks.Open(excel_path_str)
+            we_opened_wb = True
+
+        ws = wb.Sheets(sheet_name)
+
+        headers = {}
+        for c in range(1, 25):
+            v = ws.Cells(1, c).Value
+            if v:
+                headers[str(v).strip()] = c
+
+        # Leer la columna de IDs de una sola vez (mucho más rápido que
+        # celda a celda, y evita depender del "used range" de Excel, que
+        # puede estar inflado por formato aplicado a filas vacías).
+        id_rows = ws.Range("A2:A3000").Value
+        target_row = None
+        for i, row_tuple in enumerate(id_rows):
+            v = row_tuple[0] if row_tuple else None
+            if v is None:
+                continue
+            try:
+                if int(v) == id_conector:
+                    target_row = i + 2
+                    break
+            except (ValueError, TypeError):
+                continue
+
+        if target_row is None:
+            if not create_if_missing:
+                return False, f"No se encontró el conector #{id_conector} en el Excel"
+            last_row = 1  # fila de cabecera
+            for i, row_tuple in enumerate(id_rows):
+                v = row_tuple[0] if row_tuple else None
+                if v is not None:
+                    last_row = i + 2
+            target_row = last_row + 1
+
+        for field_name, value in field_updates.items():
+            col = headers.get(field_name)
+            if col is None:
+                continue
+            ws.Cells(target_row, col).Value = value
+
+        wb.Save()
+        return True, "Excel actualizado"
+    except Exception as e:
+        return False, f"No se pudo actualizar el Excel: {e}"
+    finally:
+        if wb is not None and we_opened_wb:
+            try:
+                wb.Close(False)
+            except Exception:
+                pass
+        if excel is not None and we_launched_excel:
+            try:
+                excel.Quit()
+            except Exception:
+                pass
+
+
 def build_image_cache():
     """
     Cachea las imágenes que servirá /imagen/{id}.
-    Prioridad: imagenes_originales/ (alta resolución), luego Excel (70px).
+    Prioridad: imagenes_originales/ (alta resolución) > columna "Foto" del
+    Excel (foto real insertada en celda) > columna "Imagen" del Excel
+    (dibujo técnico, último recurso).
     Guarda siempre como PNG en img_cache/{id}.png.
     """
     IMG_CACHE_DIR.mkdir(exist_ok=True)
     existentes = {int(p.stem) for p in IMG_CACHE_DIR.glob("*.png") if p.stem.isdigit()}
     print(f"  cache previo: {len(existentes)} archivos")
 
-    # Siempre sobrescribimos desde imagenes_originales/ (fuente más fiable)
+    # Siempre sobrescribimos desde imagenes_originales/ (fuente más fiable).
+    # Algunos archivos de esa carpeta son en realidad dibujos técnicos, no
+    # fotos reales, así que los detectamos para poder cederles el puesto a
+    # una foto real de la columna "Foto" del Excel si existe.
     n_orig = 0
+    ids_originales = set()
+    ids_originales_dibujo = set()
     if IMG_ORIG_DIR.exists():
         for src in IMG_ORIG_DIR.iterdir():
             if src.suffix.lower() not in EXT_ORDER:
@@ -105,16 +339,39 @@ def build_image_cache():
                 pil = Image.open(src).convert("RGB")
                 pil.save(dst, format="PNG", optimize=True)
                 n_orig += 1
+                ids_originales.add(cid)
+                if is_line_drawing(pil):
+                    ids_originales_dibujo.add(cid)
             except Exception as e:
                 print(f"    ! {src.name}: {e}")
-    print(f"  desde imagenes_originales/: {n_orig}")
+    print(f"  desde imagenes_originales/: {n_orig} (de ellos, dibujo técnico: {len(ids_originales_dibujo)})")
 
-    # Fallback: los IDs que no estén en originales se sacan del Excel
     if not EXCEL_FILE.exists():
         print(f"  ⚠  {EXCEL_FILE.name} no encontrado; sin fallback")
         return
 
-    cached_now = {int(p.stem) for p in IMG_CACHE_DIR.glob("*.png") if p.stem.isdigit()}
+    # Fotos reales insertadas "en celda" en la columna Foto (prioridad 2):
+    # mejor que cualquier dibujo técnico, venga este de imagenes_originales/
+    # o del Excel. Solo respeta una foto real ya existente en originales/.
+    foto_photos = extract_foto_column_photos(EXCEL_FILE, SHEET_NAME, "M")
+    ids_foto = set()
+    n_foto = 0
+    for cid, raw in foto_photos.items():
+        if cid in ids_originales and cid not in ids_originales_dibujo:
+            continue
+        try:
+            pil = Image.open(io.BytesIO(raw)).convert("RGB")
+            pil.save(IMG_CACHE_DIR / f"{cid}.png", format="PNG", optimize=True)
+            n_foto += 1
+            ids_foto.add(cid)
+        except Exception as e:
+            print(f"    ! foto en celda id {cid}: {e}")
+    print(f"  desde columna Foto (en celda): {n_foto}")
+
+    # Fallback final: los IDs que todavía no tengan ninguna imagen cacheada
+    # (ni original, ni sustituida por una foto de la columna Foto) se sacan
+    # del dibujo técnico del Excel como último recurso.
+    cached_now = ids_originales | ids_foto
 
     wb = load_workbook(EXCEL_FILE)
     ws = wb[SHEET_NAME]
@@ -429,13 +686,58 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
             match_row = found.iloc[0]
             match_type = "ref_fae"
 
-    # 3) Intentar como Referencia Comercial (exacta)
-    if match_row is None and "Referencia Comercial" in meta.columns:
-        ref_col = meta["Referencia Comercial"].astype(str).str.strip()
+    # 3) Intentar como Referencia Proveedor (exacta)
+    if match_row is None and "Referencia Proveedor" in meta.columns:
+        ref_col = meta["Referencia Proveedor"].astype(str).str.strip()
         found = meta[ref_col == q_str]
         if len(found) > 0:
             match_row = found.iloc[0]
-            match_type = "ref_comercial"
+            match_type = "ref_proveedor"
+
+    # 4) Sin coincidencia exacta de ID/Referencia: buscar el texto en
+    #    cualquier otro campo (Contraconector, Proveedor, Descripción, ...)
+    #    y devolver TODOS los conectores asociados a ese valor.
+    GENERIC_SEARCH_COLUMNS = [
+        "Contraconector", "Plano que contiene el contraconector",
+        "Proveedor", "Descripción", "Colores", "Formas", "Tipo (M/H)",
+        "Fabricación Interna", "Caja", "Referencia FAE", "Referencia Proveedor",
+        "Ref. Acabado",
+    ]
+    if match_row is None:
+        q_lower = q_str.lower()
+        mask = pd.Series(False, index=meta.index)
+        campos_con_match = []
+        for col in GENERIC_SEARCH_COLUMNS:
+            if col not in meta.columns:
+                continue
+            col_mask = meta[col].astype(str).str.lower().str.contains(
+                q_lower, regex=False, na=False
+            )
+            if col_mask.any():
+                campos_con_match.append(col)
+            mask = mask | col_mask
+
+        found = meta[mask]
+        if len(found) > 0:
+            resultados = [
+                {
+                    "id_conector": int(row["ID - Conector catálogo"]),
+                    "similitud": None,
+                    "meta": meta_row_to_dict(row),
+                }
+                for _, row in found.iterrows()
+            ]
+            return JSONResponse({
+                "match": None,
+                "match_type": "campo_generico",
+                "similares": [],
+                "n_similares": 0,
+                "resultados": resultados,
+                "n_resultados": len(resultados),
+                "campos_con_match": campos_con_match,
+                "aviso": f"'{q_str}' no es un ID ni una referencia, pero aparece en: "
+                         f"{', '.join(campos_con_match)}",
+            })
 
     if match_row is None:
         return JSONResponse({
@@ -443,6 +745,8 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
             "match_type": None,
             "similares": [],
             "n_similares": 0,
+            "resultados": [],
+            "n_resultados": 0,
             "aviso": f"No se encontró ningún conector con '{q_str}'",
         })
 
@@ -480,6 +784,8 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
         "match_type": match_type,
         "similares": similares,
         "n_similares": len(similares),
+        "resultados": [],
+        "n_resultados": 0,
     })
 
 
@@ -487,17 +793,16 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
 async def registrar_conector(
     file: UploadFile = File(...),
     referencia_fae: Optional[str] = Form(None),
-    referencia_comercial: Optional[str] = Form(None),
+    referencia_proveedor: Optional[str] = Form(None),
     proveedor: Optional[str] = Form(None),
     descripcion: Optional[str] = Form(None),
     terminales: Optional[int] = Form(None),
     forma: Optional[str] = Form(None),
     tipo_mh: Optional[str] = Form(None),
     colores: Optional[str] = Form(None),
-    precio: Optional[float] = Form(None),
+    caja: Optional[str] = Form(None),
     contraconector: Optional[str] = Form(None),
-    id_contraconector: Optional[str] = Form(None),
-    es_de_fae: Optional[str] = Form(None),
+    plano_contraconector: Optional[str] = Form(None),
 ):
     """
     Registra un conector que todavía no está en el catálogo: guarda su foto,
@@ -545,18 +850,17 @@ async def registrar_conector(
         "ID - Conector catálogo": new_id,
         "Imagen": None,
         "Contraconector": contraconector,
-        "ID Contraconector": id_contraconector,
+        "Plano que contiene el contraconector": plano_contraconector,
         "Referencia FAE": referencia_fae,
         "Conector aereo": None,
         "Terminales": float(terminales) if terminales is not None else None,
         "Formas": forma,
-        "Es de FAE": es_de_fae or "Sí",
-        "Referencia Comercial": referencia_comercial,
+        "Referencia Proveedor": referencia_proveedor,
         "Proveedor": proveedor,
         "Descripción": descripcion,
         "Tipo (M/H)": tipo_mh,
         "Colores": colores,
-        "Precio unitario (€)": precio,
+        "Caja": caja,
     }
     new_row = {k: v for k, v in new_row.items() if k in meta.columns}
     meta_updated = pd.concat([meta, pd.DataFrame([new_row])], ignore_index=True)
@@ -566,16 +870,131 @@ async def registrar_conector(
     meta_updated.to_pickle(META_FILE)
     STATE["meta"] = meta_updated
 
+    # 5) Añadir la misma fila al Excel real (fila nueva al final)
+    excel_ok, excel_msg = write_fields_to_excel(
+        EXCEL_FILE, SHEET_NAME, new_id, new_row, create_if_missing=True
+    )
+
+    mensaje = f"Conector #{new_id} registrado correctamente."
+    if not excel_ok:
+        mensaje += f" Aviso: no se pudo añadir al Excel ({excel_msg})."
+
     return JSONResponse({
         "ok": True,
         "id_conector": new_id,
-        "mensaje": f"Conector #{new_id} registrado correctamente.",
+        "excel_sincronizado": excel_ok,
+        "excel_mensaje": excel_msg,
+        "mensaje": mensaje,
+    })
+
+
+@app.post("/editar_conector")
+async def editar_conector(
+    id_conector: int = Form(...),
+    file: Optional[UploadFile] = File(None),
+    referencia_fae: Optional[str] = Form(None),
+    referencia_proveedor: Optional[str] = Form(None),
+    proveedor: Optional[str] = Form(None),
+    descripcion: Optional[str] = Form(None),
+    terminales: Optional[int] = Form(None),
+    forma: Optional[str] = Form(None),
+    tipo_mh: Optional[str] = Form(None),
+    colores: Optional[str] = Form(None),
+    caja: Optional[str] = Form(None),
+    contraconector: Optional[str] = Form(None),
+    plano_contraconector: Optional[str] = Form(None),
+):
+    """
+    Edita un conector que ya existe en el catálogo: actualiza sus metadatos
+    (y opcionalmente su foto) en caliente, y sincroniza los mismos cambios
+    en el Excel real (vía Excel COM, no openpyxl).
+    """
+    meta = STATE["meta"]
+    id_col = "ID - Conector catálogo"
+    mask = meta[id_col] == id_conector
+    if not mask.any():
+        raise HTTPException(404, f"No existe el conector #{id_conector}")
+    idx = meta.index[mask][0]
+
+    campo_valor = {
+        "Referencia FAE": referencia_fae,
+        "Referencia Proveedor": referencia_proveedor,
+        "Proveedor": proveedor,
+        "Descripción": descripcion,
+        "Terminales": float(terminales) if terminales is not None else None,
+        "Formas": forma,
+        "Tipo (M/H)": tipo_mh,
+        "Colores": colores,
+        "Caja": caja,
+        "Contraconector": contraconector,
+        "Plano que contiene el contraconector": plano_contraconector,
+    }
+
+    # 1) Metadatos en memoria + pkl (solo columnas que existan en el esquema)
+    for campo, valor in campo_valor.items():
+        if campo in meta.columns:
+            meta.at[idx, campo] = None if valor == "" else valor
+
+    if META_FILE.exists():
+        shutil.copy(META_FILE, HERE / "catalogo_meta.backup.pkl")
+    meta.to_pickle(META_FILE)
+    STATE["meta"] = meta
+
+    # 2) Foto nueva (opcional): actualizar original + caché + embedding
+    foto_actualizada = False
+    if file is not None and file.filename:
+        try:
+            raw = await file.read()
+            pil = Image.open(io.BytesIO(raw)).convert("RGB")
+        except Exception as e:
+            raise HTTPException(400, f"Imagen inválida: {e}")
+
+        IMG_ORIG_DIR.mkdir(exist_ok=True)
+        pil.save(IMG_ORIG_DIR / f"{id_conector}.png", format="PNG")
+        IMG_CACHE_DIR.mkdir(exist_ok=True)
+        pil.save(IMG_CACHE_DIR / f"{id_conector}.png", format="PNG", optimize=True)
+
+        tensor = STATE["preprocess_b"](pil).unsqueeze(0).to(STATE["device"])
+        with torch.no_grad():
+            feats = STATE["model_b"].encode_image(tensor)
+            feats = feats / feats.norm(dim=-1, keepdim=True)
+        new_emb = feats.cpu().numpy()[0].astype(np.float32)
+
+        if id_conector in STATE["id_to_idx"]:
+            pos = STATE["id_to_idx"][id_conector]
+            STATE["embeddings_b"][pos] = new_emb
+        else:
+            STATE["embeddings_b"] = np.vstack([STATE["embeddings_b"], new_emb[None, :]])
+            STATE["ids"] = np.append(STATE["ids"], np.int64(id_conector))
+            STATE["id_to_idx"][id_conector] = len(STATE["ids"]) - 1
+        np.savez_compressed(
+            EMBEDDINGS_B_FILE, embeddings=STATE["embeddings_b"], ids=STATE["ids"]
+        )
+        foto_actualizada = True
+
+    # 3) Sincronizar los mismos cambios con el Excel real
+    excel_fields = {k: (None if v == "" else v) for k, v in campo_valor.items()}
+    excel_ok, excel_msg = write_fields_to_excel(
+        EXCEL_FILE, SHEET_NAME, id_conector, excel_fields
+    )
+
+    mensaje = f"Conector #{id_conector} actualizado."
+    if not excel_ok:
+        mensaje += f" Aviso: no se pudo sincronizar con el Excel ({excel_msg})."
+
+    return JSONResponse({
+        "ok": True,
+        "id_conector": id_conector,
+        "foto_actualizada": foto_actualizada,
+        "excel_sincronizado": excel_ok,
+        "excel_mensaje": excel_msg,
+        "mensaje": mensaje,
     })
 
 
 @app.post("/search")
 async def search(
-    files: List[UploadFile] = File(...),    # acepta 1..N imágenes bajo el nombre 'files'
+    files: List[UploadFile] = File(default=[]),    # acepta 0..N imágenes bajo el nombre 'files'
     top_k: int = Form(DEFAULT_TOP_K),
     terminales: Optional[int] = Form(None),
     forma: Optional[str] = Form(None),
@@ -583,10 +1002,46 @@ async def search(
     rerank: int = Form(1),
     debug: int = Form(0),
 ):
-    if not files:
-        raise HTTPException(400, "No se ha recibido ninguna imagen")
+    # Quitar archivos vacíos que a veces manda el navegador cuando no hay foto
+    files = [f for f in files if f.filename]
+
+    if not files and not (terminales or forma or tipo_mh):
+        raise HTTPException(
+            400, "Sube una foto o aplica al menos un filtro para buscar"
+        )
     if len(files) > 8:
         raise HTTPException(400, "Máximo 8 imágenes por búsqueda")
+
+    # ── Búsqueda solo por filtros (sin foto): sin similitud CLIP ─────────
+    if not files:
+        meta = STATE["meta"]
+        filtered = apply_filters(meta, terminales, forma, tipo_mh)
+        n_candidatos = len(filtered)
+
+        filtered = filtered.sort_values("ID - Conector catálogo").head(top_k)
+        results = [
+            {
+                "id_conector": int(row["ID - Conector catálogo"]),
+                "similitud": None,
+                "meta": meta_row_to_dict(row),
+            }
+            for _, row in filtered.iterrows()
+        ]
+
+        return JSONResponse({
+            "query_filenames": [],
+            "n_imagenes": 0,
+            "modos": [],
+            "scoring": "solo filtros (sin foto)",
+            "filtros_aplicados": {
+                "terminales": terminales, "forma": forma, "tipo_mh": tipo_mh
+            },
+            "n_candidatos": int(n_candidatos),
+            "results": results,
+            "aviso": None if n_candidatos else (
+                "Ningún conector del catálogo cumple esos filtros. Prueba a relajarlos."
+            ),
+        })
 
     # ── Leer y preprocesar cada imagen ───────────────────────────────────
     processed_images = []

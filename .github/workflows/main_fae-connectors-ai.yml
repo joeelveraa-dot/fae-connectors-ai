@@ -24,11 +24,12 @@ jobs:
             -x "*.git*" \
             -x "*__pycache__*" \
             -x "*.venv*" \
-            -x "*imagenes_originales*" \
             -x "*img_cache*" \
             -x "*.bin" \
             -x "*.cache" \
-            -x "catalogo_meta.backup.pkl" \
+            -x "catalogo_conectores_completo.backup_*.xlsx" \
+            -x "catalogo_meta.backup*.pkl" \
+            -x "embeddings_b.backup*.npz" \
             -x "conector_prueba.jpg" \
             -x "test_img.png"
 

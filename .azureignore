@@ -1,13 +1,14 @@
 .venv/
 __pycache__/
 
-imagenes_originales/
 img_cache/
 
 *.bin
 *.cache
 
-catalogo_meta.backup.pkl
+catalogo_conectores_completo.backup_*.xlsx
+catalogo_meta.backup*.pkl
+embeddings_b.backup*.npz
 conector_prueba.jpg
 test_img.png
 test_sanity.py

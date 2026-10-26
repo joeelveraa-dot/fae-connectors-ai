@@ -1206,13 +1206,13 @@
           <circle cx="11" cy="11" r="7"/>
           <path d="M21 21l-4.35-4.35"/>
         </svg>
-        Buscar por ID o Ref FAE
+        Buscar por cualquier dato
       </div>
       <div class="id-lookup-row">
-        <input type="text" id="idLookupInput" placeholder="Ej: 955 o 311160" autocomplete="off" />
+        <input type="text" id="idLookupInput" placeholder="Ej: ID, referencia, contraconector, proveedor..." autocomplete="off" />
         <button class="btn-lookup" id="idLookupBtn" type="button">Buscar</button>
       </div>
-      <div class="id-lookup-hint">Si ya conoces el conector, ve directo sin subir foto</div>
+      <div class="id-lookup-hint">Busca por ID, referencia, contraconector, proveedor, color... y ve todos los conectores asociados</div>
     </div>
 
     <!-- Registrar conector nuevo (si no está en el catálogo) -->
@@ -1322,7 +1322,7 @@
       </div>
       <div class="empty-text">
         <p>Carga una foto para comenzar</p>
-        <p class="sub">El sistema buscará los conectores más similares</p>
+        <p class="sub">O aplica filtros a la izquierda y busca sin foto</p>
       </div>
     </div>
 
@@ -1366,17 +1366,26 @@
             <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Seleccionado</div>
             <div class="detail-id" id="detailId" style="font-size: 20px; font-weight: 500;">—</div>
           </div>
-          <button class="detail-close" onclick="closeDetail()">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="detail-close" onclick="openEditModal()" title="Editar conector">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+              </svg>
+            </button>
+            <button class="detail-close" onclick="closeDetail()">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="detail-grid" style="display: grid; grid-template-columns: 240px 1fr 1fr; gap: 20px; margin-bottom: 16px;">
           <!-- Columna 1: imagen grande -->
-          <div class="detail-img" style="aspect-ratio: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          <div class="detail-img" style="aspect-ratio: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
             <img id="detailImg" src="" alt="" style="width: 100%; height: 100%; object-fit: contain; padding: 12px;">
+            <span id="detailImgIdBadge" style="position:absolute; top:8px; left:8px; background:var(--accent); color:var(--accent-fg); font-family:'DM Mono',monospace; font-size:11px; font-weight:500; padding:4px 9px; border-radius:6px; letter-spacing:0.04em;">ID: —</span>
           </div>
 
           <!-- Columna 2: propiedades principales -->
@@ -1401,17 +1410,13 @@
               <div class="detail-field-label">Similitud</div>
               <div class="detail-field-val" id="detailScore">—</div>
             </div>
-            <div class="detail-field">
-              <div class="detail-field-label">Es de FAE</div>
-              <div class="detail-field-val" id="detailFae">—</div>
-            </div>
           </div>
 
           <!-- Columna 3: datos comerciales -->
           <div class="detail-fields">
             <div class="detail-field">
-              <div class="detail-field-label">Ref. Comercial</div>
-              <div class="detail-field-val empty" id="detailRefCom">—</div>
+              <div class="detail-field-label">Referencia Proveedor</div>
+              <div class="detail-field-val empty" id="detailRefProveedor">—</div>
             </div>
             <div class="detail-field">
               <div class="detail-field-label">Proveedor</div>
@@ -1422,16 +1427,16 @@
               <div class="detail-field-val empty" id="detailContra">sin asignar</div>
             </div>
             <div class="detail-field">
-              <div class="detail-field-label">ID Contraconector</div>
-              <div class="detail-field-val empty" id="detailIdContra">—</div>
-            </div>
-            <div class="detail-field">
-              <div class="detail-field-label">Precio unitario</div>
-              <div class="detail-field-val empty" id="detailPrecio">—</div>
+              <div class="detail-field-label">Plano Contraconector</div>
+              <div class="detail-field-val empty" id="detailPlano">—</div>
             </div>
             <div class="detail-field">
               <div class="detail-field-label">Colores</div>
               <div class="detail-field-val empty" id="detailColores">—</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-field-label">Caja</div>
+              <div class="detail-field-val empty" id="detailCaja">—</div>
             </div>
           </div>
         </div>
@@ -1440,6 +1445,12 @@
         <div class="detail-field" id="detailDescWrap" style="margin-bottom: 16px; display: none;">
           <div class="detail-field-label">Descripción</div>
           <div class="detail-field-val" id="detailDesc" style="white-space: pre-wrap; line-height: 1.5;">—</div>
+        </div>
+
+        <!-- Ref. Acabado a ancho completo (puede listar muchas referencias) -->
+        <div class="detail-field" id="detailRefAcabadoWrap" style="margin-bottom: 16px; display: none;">
+          <div class="detail-field-label">Ref. Acabado</div>
+          <div class="detail-field-val" id="detailRefAcabado" style="white-space: pre-wrap; line-height: 1.5;">—</div>
         </div>
 
         <div class="detail-actions">
@@ -1520,7 +1531,7 @@
 <div class="register-mask" id="registerMask">
   <div class="register-modal">
     <div class="register-modal-header">
-      <div class="register-modal-title">Registrar conector nuevo</div>
+      <div class="register-modal-title" id="registerModalTitle">Registrar conector nuevo</div>
       <button class="detail-close" onclick="closeRegisterModal()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -1537,7 +1548,7 @@
             <circle cx="8.5" cy="8.5" r="1.5"/>
             <path d="M21 15l-5-5L5 21"/>
           </svg>
-          <p>Foto del conector nuevo<br>(obligatoria)</p>
+          <p id="regUploadHint">Foto del conector nuevo<br>(obligatoria)</p>
         </div>
       </div>
       <input type="file" id="regFileInput" accept="image/*" style="display:none">
@@ -1548,8 +1559,8 @@
           <input type="text" id="regRefFae" placeholder="Ej: 311160">
         </div>
         <div class="register-field">
-          <label>Referencia Comercial</label>
-          <input type="text" id="regRefComercial" placeholder="Ref. del proveedor">
+          <label>Referencia Proveedor</label>
+          <input type="text" id="regRefProveedor" placeholder="Ref. del proveedor">
         </div>
         <div class="register-field">
           <label>Forma</label>
@@ -1574,13 +1585,6 @@
           </select>
         </div>
         <div class="register-field">
-          <label>Es de FAE</label>
-          <select id="regEsFae">
-            <option value="Sí">Sí</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-        <div class="register-field">
           <label>Proveedor</label>
           <input type="text" id="regProveedor" placeholder="Fabricante / proveedor">
         </div>
@@ -1589,16 +1593,16 @@
           <input type="text" id="regColores" placeholder="Ej: Negro">
         </div>
         <div class="register-field">
+          <label>Caja</label>
+          <input type="text" id="regCaja" placeholder="Ej: Caja Azul 7">
+        </div>
+        <div class="register-field">
           <label>Contraconector</label>
           <input type="text" id="regContra" placeholder="Referencia del contraconector">
         </div>
         <div class="register-field">
-          <label>ID Contraconector</label>
-          <input type="text" id="regIdContra" placeholder="ID en el catálogo">
-        </div>
-        <div class="register-field">
-          <label>Precio unitario (€)</label>
-          <input type="number" id="regPrecio" step="0.01" min="0" placeholder="0.00">
+          <label>Plano Contraconector</label>
+          <input type="text" id="regPlano" placeholder="Nº de plano">
         </div>
         <div class="register-field full">
           <label>Descripción</label>
@@ -1659,6 +1663,7 @@ let hasImage = false;
 let currentFiles = [];           // File[] del input (1..N imágenes)
 let currentResults = [];
 let selectedCard = null;
+let currentDetailConnector = null;  // datos del conector mostrado en el panel de detalle (para editar)
 let sortMode = 'sim';
 let evalHistory = [];            // [{hora, idReal, puesto, similitud, filtros, nImgs}]
 let rejectedIds = new Set();     // IDs descartados temporalmente (con botón "Descartar")
@@ -1734,6 +1739,12 @@ document.addEventListener('drop', e => {
 
 function triggerUpload(e) { e.stopPropagation(); fileInput.click(); }
 
+// Permitir buscar solo con filtros (sin foto): habilitar el botón al elegir cualquiera
+['filterForma', 'filterPines', 'filterTipoMH'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => updateSearchBtnState());
+});
+
 /* ─── Listeners del buscador por ID/Ref FAE ─── */
 (function bindIdLookup() {
   const input = document.getElementById('idLookupInput');
@@ -1771,7 +1782,7 @@ function renderPrimary() {
     previewImg.src = '';
     uploadZone.classList.remove('has-image');
     hasImage = false;
-    searchBtn.disabled = true;
+    updateSearchBtnState();
     document.getElementById('qualityBar').classList.remove('visible');
     return;
   }
@@ -1780,7 +1791,7 @@ function renderPrimary() {
     previewImg.src = e.target.result;
     uploadZone.classList.add('has-image');
     hasImage = true;
-    searchBtn.disabled = false;
+    updateSearchBtnState();
     analyzeQuality(e.target.result);
     resetResults();
   };
@@ -1884,8 +1895,27 @@ function analyzeQuality(dataUrl) {
 }
 
 // ── SEARCH ────────────────────────────────────────────────────────────
+function hasAnyFilter() {
+  const forma = document.getElementById('filterForma').value;
+  const pines = document.getElementById('filterPines').value;
+  const tipoMH = document.getElementById('filterTipoMH').value;
+  return !!(forma || pines || tipoMH);
+}
+
+function updateSearchBtnState() {
+  const withImage = hasImage && currentFiles.length > 0;
+  searchBtn.disabled = !withImage && !hasAnyFilter();
+
+  const lbl = document.getElementById('searchBtnLabel');
+  const expectedEl = document.getElementById('expectedId');
+  if (lbl && expectedEl && !expectedEl.value.trim()) {
+    lbl.textContent = withImage ? 'Identificar conector' : 'Buscar por filtros';
+  }
+}
+
 async function runSearch() {
-  if (!hasImage || currentFiles.length === 0) return;
+  const searchingByFiltersOnly = !(hasImage && currentFiles.length > 0);
+  if (searchingByFiltersOnly && !hasAnyFilter()) return;
 
   resetResults();
   document.getElementById('emptyState').style.display = 'none';
@@ -1903,8 +1933,11 @@ async function runSearch() {
 
     const fd = new FormData();
     // Enviar TODAS las fotos bajo el mismo nombre 'files' (FastAPI recibirá List[UploadFile])
-    for (const f of currentFiles) {
-      fd.append('files', f);
+    // Si se busca solo por filtros, no se añade ninguna foto.
+    if (!searchingByFiltersOnly) {
+      for (const f of currentFiles) {
+        fd.append('files', f);
+      }
     }
     fd.append('top_k', topK);
     fd.append('rerank', rerank);
@@ -1930,24 +1963,32 @@ async function runSearch() {
         return {
           id: String(r.id_conector),
           score: r.similitud,
-          ref: m['Referencia FAE'] || m['Referencia Comercial'] || '',
+          ref: m['Referencia FAE'] || m['Referencia Proveedor'] || '',
           refFae: m['Referencia FAE'] || '',
-          refComercial: m['Referencia Comercial'] || '',
+          refProveedor: m['Referencia Proveedor'] || '',
           proveedor: m['Proveedor'] || '',
           descripcion: m['Descripción'] || '',
           forma: m['Formas'] || '',
           pines: m['Terminales'] ? parseInt(m['Terminales']) : null,
-          fae: m['Es de FAE'] === 'Sí',
           tipoMH: m['Tipo (M/H)'] || '',
           contra: m['Contraconector'] || '',
-          idContra: m['ID Contraconector'] || '',
+          plano: m['Plano que contiene el contraconector'] || '',
           colores: m['Colores'] || '',
-          precio: m['Precio unitario (€)'],
+          caja: m['Caja'] || '',
+          refAcabado: m['Ref. Acabado'] || '',
         };
       });
 
       document.getElementById('resultsNum').textContent =
         `${currentResults.length}` + (data.n_candidatos ? ` (de ${data.n_candidatos} candidatos)` : '');
+
+      // Búsqueda solo por filtros: no hay similitud, ordenar por ID
+      if (!data.n_imagenes) {
+        sortMode = 'id';
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+        const idBtn = Array.from(document.querySelectorAll('.sort-btn')).find(b => b.textContent.trim() === 'ID');
+        if (idBtn) idBtn.classList.add('active');
+      }
 
       // Aviso del modo detectado
       const modos = data.modos || (data.modo ? [data.modo] : []);
@@ -1968,14 +2009,14 @@ async function runSearch() {
         document.getElementById('evalBanner').style.display = 'none';
       }
 
-      searchBtn.disabled = false;
+      updateSearchBtnState();
     }, 200);
 
   } catch (e) {
     document.getElementById('loadingOverlay').classList.remove('visible');
     document.getElementById('emptyState').style.display = '';
     showToast('Error: ' + e.message, 'info');
-    searchBtn.disabled = false;
+    updateSearchBtnState();
     console.error(e);
   }
 }
@@ -2002,32 +2043,54 @@ async function runLookupById() {
     }
     const data = await r.json();
 
-    if (!data.match) {
-      showToast(data.aviso || `No encontrado: ${q}`, 'info');
-      return;
-    }
-
-    // Mapear match + similares a la estructura currentResults (misma que /search)
+    // Mapear match/similares/resultados a la estructura currentResults (misma que /search)
     const mapResult = (r, scoreOverride) => {
       const m = r.meta || {};
       return {
         id: String(r.id_conector),
-        score: scoreOverride !== undefined ? scoreOverride : (r.similitud ?? 0),
-        ref: m['Referencia FAE'] || m['Referencia Comercial'] || '',
+        score: scoreOverride !== undefined ? scoreOverride : (r.similitud ?? null),
+        ref: m['Referencia FAE'] || m['Referencia Proveedor'] || '',
         refFae: m['Referencia FAE'] || '',
-        refComercial: m['Referencia Comercial'] || '',
+        refProveedor: m['Referencia Proveedor'] || '',
         proveedor: m['Proveedor'] || '',
         descripcion: m['Descripción'] || '',
         forma: m['Formas'] || '',
         pines: m['Terminales'] ? parseInt(m['Terminales']) : null,
-        fae: m['Es de FAE'] === 'Sí',
         tipoMH: m['Tipo (M/H)'] || '',
         contra: m['Contraconector'] || '',
-        idContra: m['ID Contraconector'] || '',
+        plano: m['Plano que contiene el contraconector'] || '',
         colores: m['Colores'] || '',
-        precio: m['Precio unitario (€)'],
+        caja: m['Caja'] || '',
+        refAcabado: m['Ref. Acabado'] || '',
       };
     };
+
+    if (!data.match) {
+      // Sin ID/referencia exacta: ¿hay resultados por coincidencia en otro campo?
+      if (data.resultados && data.resultados.length > 0) {
+        currentResults = data.resultados.map(r => mapResult(r));
+
+        document.getElementById('resultsNum').textContent =
+          `${currentResults.length} asociados a "${q}"`;
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('resultsSection').style.display = 'flex';
+
+        // Sin similitud: ordenar por ID y marcarlo en los botones de orden
+        sortMode = 'id';
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+        const idBtn = Array.from(document.querySelectorAll('.sort-btn')).find(b => b.textContent.trim() === 'ID');
+        if (idBtn) idBtn.classList.add('active');
+
+        renderResults();
+        showToast(data.aviso || `${currentResults.length} conectores asociados a "${q}"`, 'info');
+
+        const evalBanner = document.getElementById('evalBanner');
+        if (evalBanner) evalBanner.style.display = 'none';
+      } else {
+        showToast(data.aviso || `No encontrado: ${q}`, 'info');
+      }
+      return;
+    }
 
     // El match va primero con score 1.0 (marcado como "encontrado")
     const matchResult = mapResult(data.match, 1.0);
@@ -2116,13 +2179,13 @@ function renderResults() {
   }
 
   sorted.forEach((c, idx) => {
-    const scoreClass = c.score > 0.85 ? 'score-high' : c.score > 0.65 ? 'score-mid' : 'score-low';
+    const hasScore = c.score !== null && c.score !== undefined && !Number.isNaN(c.score);
+    const scoreClass = !hasScore ? '' : (c.score > 0.85 ? 'score-high' : c.score > 0.65 ? 'score-mid' : 'score-low');
     const shapeTag = c.forma ? `<span class="tag shape-${c.forma.toLowerCase().replace('/','-')}">${c.forma}</span>` : '';
     const pinesTag = c.pines ? `<span class="tag">${c.pines}p</span>` : '';
-    const faeTag = c.fae ? `<span class="tag fae">FAE</span>` : '';
-    const isTop = idx === 0 && sortMode === 'sim';
+    const isTop = idx === 0 && sortMode === 'sim' && hasScore;
     const imgUrl = `${API_BASE}/imagen/${c.id}`;
-    const refTxt = c.ref || c.refComercial || '';
+    const refTxt = c.ref || c.refProveedor || '';
 
     const card = document.createElement('div');
     card.className = 'result-card' + (isTop ? ' top-match' : '');
@@ -2133,12 +2196,12 @@ function renderResults() {
         <img src="${imgUrl}" alt="Conector ${c.id}" loading="lazy"
              onerror="this.src='${placeholderSVG(c.forma)}'">
         ${isTop ? '<span class="top-label">mejor</span>' : ''}
-        <span class="card-score-badge ${scoreClass}">${Math.round(c.score * 100)}%</span>
+        ${hasScore ? `<span class="card-score-badge ${scoreClass}">${Math.round(c.score * 100)}%</span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-id">#${c.id}</div>
         ${refTxt ? `<div class="card-ref">${refTxt}</div>` : ''}
-        <div class="card-tags">${shapeTag}${pinesTag}${faeTag}</div>
+        <div class="card-tags">${shapeTag}${pinesTag}</div>
       </div>
     `;
     card.addEventListener('click', () => openDetail(c, card));
@@ -2147,7 +2210,7 @@ function renderResults() {
 }
 
 function sortResults(results) {
-  if (sortMode === 'sim') return [...results].sort((a,b) => b.score - a.score);
+  if (sortMode === 'sim') return [...results].sort((a,b) => (b.score ?? -1) - (a.score ?? -1));
   return [...results].sort((a,b) => parseInt(a.id) - parseInt(b.id));
 }
 
@@ -2163,6 +2226,7 @@ function openDetail(c, cardEl) {
   if (selectedCard) selectedCard.classList.remove('selected');
   selectedCard = cardEl;
   cardEl.classList.add('selected');
+  currentDetailConnector = c;
 
   // Helper: rellena un campo con valor o placeholder "—" + clase empty
   function setField(id, value, opts = {}) {
@@ -2176,10 +2240,12 @@ function openDetail(c, cardEl) {
   }
 
   // Cabecera
-  document.getElementById('detailId').textContent = '#' + c.id;
+  document.getElementById('detailId').textContent = 'ID ' + c.id;
   const detailImg = document.getElementById('detailImg');
   detailImg.src = `${API_BASE}/imagen/${c.id}`;
   detailImg.onerror = () => { detailImg.src = placeholderSVG(c.forma); };
+  const imgIdBadge = document.getElementById('detailImgIdBadge');
+  if (imgIdBadge) imgIdBadge.textContent = 'ID: ' + c.id;
 
   // Columna 2: propiedades
   setField('detailRef', c.refFae, { highlight: true, emptyText: 'sin referencia FAE' });
@@ -2187,22 +2253,17 @@ function openDetail(c, cardEl) {
   setField('detailPines', c.pines ? c.pines + ' terminales' : null);
   setField('detailTipoMH', c.tipoMH);
   const scoreEl = document.getElementById('detailScore');
-  scoreEl.textContent = (c.score * 100).toFixed(1) + '% similitud';
-  scoreEl.className = 'detail-field-val';
-  const faeEl = document.getElementById('detailFae');
-  faeEl.textContent = c.fae ? 'Sí' : 'No';
-  faeEl.className = 'detail-field-val' + (c.fae ? ' highlight' : '');
+  const hasScore = c.score !== null && c.score !== undefined && !Number.isNaN(c.score);
+  scoreEl.textContent = hasScore ? (c.score * 100).toFixed(1) + '% similitud' : 'sin foto (solo filtros)';
+  scoreEl.className = 'detail-field-val' + (hasScore ? '' : ' empty');
 
   // Columna 3: datos comerciales
-  setField('detailRefCom', c.refComercial);
+  setField('detailRefProveedor', c.refProveedor);
   setField('detailProveedor', c.proveedor);
   setField('detailContra', c.contra, { emptyText: 'sin asignar' });
-  setField('detailIdContra', c.idContra);
-  const precioTxt = (c.precio !== null && c.precio !== undefined && c.precio !== '' && !Number.isNaN(parseFloat(c.precio)))
-    ? parseFloat(c.precio).toFixed(2).replace('.', ',') + ' €'
-    : null;
-  setField('detailPrecio', precioTxt);
+  setField('detailPlano', c.plano);
   setField('detailColores', c.colores);
+  setField('detailCaja', c.caja);
 
   // Descripción solo si hay algo (ancho completo)
   const descWrap = document.getElementById('detailDescWrap');
@@ -2212,6 +2273,16 @@ function openDetail(c, cardEl) {
     descWrap.style.display = '';
   } else {
     descWrap.style.display = 'none';
+  }
+
+  // Ref. Acabado solo si hay algo (ancho completo, puede ser una lista larga)
+  const refAcabadoWrap = document.getElementById('detailRefAcabadoWrap');
+  const refAcabadoEl = document.getElementById('detailRefAcabado');
+  if (c.refAcabado && String(c.refAcabado).trim()) {
+    refAcabadoEl.textContent = c.refAcabado;
+    refAcabadoWrap.style.display = '';
+  } else {
+    refAcabadoWrap.style.display = 'none';
   }
 
   document.getElementById('detailPanel').classList.add('visible');
@@ -2389,13 +2460,16 @@ function lookupRank() {
 function placeholderSVG(forma) {
   const colors = { Redondo: '#4d9fff', Cuadrado: '#ff4d9f', Varios: '#aa4dff', '': '#555a68' };
   const c = colors[forma] || '#555a68';
+  // Nota: el SVG usa comillas dobles en sus atributos a propósito. encodeURIComponent
+  // no escapa las comillas simples, así que si el SVG las usara, "cortarían" antes de
+  // tiempo la cadena JS de onerror="this.src='...'" y el fallback nunca se aplicaría.
   if (forma === 'Redondo') {
-    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><circle cx='40' cy='40' r='28' fill='none' stroke='${c}' stroke-width='2' opacity='0.5'/><circle cx='30' cy='40' r='4' fill='${c}' opacity='0.7'/><circle cx='40' cy='40' r='4' fill='${c}' opacity='0.7'/><circle cx='50' cy='40' r='4' fill='${c}' opacity='0.7'/></svg>`)}`;
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="28" fill="none" stroke="${c}" stroke-width="2" opacity="0.5"/><circle cx="30" cy="40" r="4" fill="${c}" opacity="0.7"/><circle cx="40" cy="40" r="4" fill="${c}" opacity="0.7"/><circle cx="50" cy="40" r="4" fill="${c}" opacity="0.7"/></svg>`)}`;
   }
   if (forma === 'Cuadrado') {
-    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect x='16' y='24' width='48' height='32' rx='4' fill='none' stroke='${c}' stroke-width='2' opacity='0.5'/><rect x='26' y='34' width='8' height='12' rx='2' fill='${c}' opacity='0.7'/><rect x='46' y='34' width='8' height='12' rx='2' fill='${c}' opacity='0.7'/></svg>`)}`;
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect x="16" y="24" width="48" height="32" rx="4" fill="none" stroke="${c}" stroke-width="2" opacity="0.5"/><rect x="26" y="34" width="8" height="12" rx="2" fill="${c}" opacity="0.7"/><rect x="46" y="34" width="8" height="12" rx="2" fill="${c}" opacity="0.7"/></svg>`)}`;
   }
-  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect x='20' y='28' width='40' height='24' rx='3' fill='none' stroke='${c}' stroke-width='2' opacity='0.4'/><circle cx='30' cy='40' r='3' fill='${c}' opacity='0.6'/><circle cx='40' cy='40' r='3' fill='${c}' opacity='0.6'/><circle cx='50' cy='40' r='3' fill='${c}' opacity='0.6'/></svg>`)}`;
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect x="20" y="28" width="40" height="24" rx="3" fill="none" stroke="${c}" stroke-width="2" opacity="0.4"/><circle cx="30" cy="40" r="3" fill="${c}" opacity="0.6"/><circle cx="40" cy="40" r="3" fill="${c}" opacity="0.6"/><circle cx="50" cy="40" r="3" fill="${c}" opacity="0.6"/></svg>`)}`;
 }
 
 function resetResults() {
@@ -2412,8 +2486,9 @@ function resetResults() {
   rejectedIds.clear();
 }
 
-// ── REGISTRAR CONECTOR NUEVO ─────────────────────────────────────────
+// ── REGISTRAR / EDITAR CONECTOR ──────────────────────────────────────
 let regFile = null;
+let editingId = null;  // null = registrando uno nuevo; si no, ID que se está editando
 
 const regUploadZone = document.getElementById('regUploadZone');
 const regFileInput  = document.getElementById('regFileInput');
@@ -2446,6 +2521,40 @@ function setRegFile(file) {
 }
 
 function openRegisterModal() {
+  editingId = null;
+  resetRegisterForm();
+  document.getElementById('registerModalTitle').textContent = 'Registrar conector nuevo';
+  document.getElementById('regUploadHint').innerHTML = 'Foto del conector nuevo<br>(obligatoria)';
+  document.getElementById('regSubmitBtn').textContent = 'Guardar conector';
+  document.getElementById('registerMask').classList.add('visible');
+}
+
+function openEditModal() {
+  const c = currentDetailConnector;
+  if (!c) return;
+  resetRegisterForm();
+  editingId = c.id;
+
+  document.getElementById('registerModalTitle').textContent = `Editar conector #${c.id}`;
+  document.getElementById('regUploadHint').innerHTML = 'Foto actual<br>(opcional: haz clic para reemplazarla)';
+  document.getElementById('regSubmitBtn').textContent = 'Guardar cambios';
+
+  // Precargar la foto actual como vista previa (no se envía a menos que se reemplace)
+  regPreviewImg.src = `${API_BASE}/imagen/${c.id}`;
+  regUploadZone.classList.add('has-image');
+
+  document.getElementById('regRefFae').value = c.refFae || '';
+  document.getElementById('regRefProveedor').value = c.refProveedor || '';
+  document.getElementById('regForma').value = c.forma || '';
+  document.getElementById('regTerminales').value = c.pines || '';
+  document.getElementById('regTipoMH').value = c.tipoMH || '';
+  document.getElementById('regProveedor').value = c.proveedor || '';
+  document.getElementById('regColores').value = c.colores || '';
+  document.getElementById('regCaja').value = c.caja || '';
+  document.getElementById('regContra').value = c.contra || '';
+  document.getElementById('regPlano').value = c.plano || '';
+  document.getElementById('regDescripcion').value = c.descripcion || '';
+
   document.getElementById('registerMask').classList.add('visible');
 }
 
@@ -2455,59 +2564,73 @@ function closeRegisterModal() {
 }
 
 function resetRegisterForm() {
+  editingId = null;
   regFile = null;
   regFileInput.value = '';
   regPreviewImg.src = '';
   regUploadZone.classList.remove('has-image');
-  ['regRefFae','regRefComercial','regTerminales','regProveedor','regColores',
-   'regContra','regIdContra','regPrecio','regDescripcion'].forEach(id => {
+  ['regRefFae','regRefProveedor','regTerminales','regProveedor','regColores','regCaja',
+   'regContra','regPlano','regDescripcion'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('regForma').value = '';
   document.getElementById('regTipoMH').value = '';
-  document.getElementById('regEsFae').value = 'Sí';
 }
 
 async function submitRegister() {
-  if (!regFile) {
+  const isEdit = editingId !== null;
+  if (!isEdit && !regFile) {
     showToast('Añade una foto del conector', 'info');
     return;
   }
   const btn = document.getElementById('regSubmitBtn');
+  const idleLabel = isEdit ? 'Guardar cambios' : 'Guardar conector';
   btn.disabled = true;
   btn.textContent = 'Guardando…';
 
   try {
     const fd = new FormData();
-    fd.append('file', regFile);
+    if (isEdit) fd.append('id_conector', editingId);
+    if (regFile) fd.append('file', regFile);
     const fields = {
       referencia_fae: 'regRefFae',
-      referencia_comercial: 'regRefComercial',
+      referencia_proveedor: 'regRefProveedor',
       proveedor: 'regProveedor',
       descripcion: 'regDescripcion',
       terminales: 'regTerminales',
       forma: 'regForma',
       tipo_mh: 'regTipoMH',
       colores: 'regColores',
-      precio: 'regPrecio',
+      caja: 'regCaja',
       contraconector: 'regContra',
-      id_contraconector: 'regIdContra',
-      es_de_fae: 'regEsFae',
+      plano_contraconector: 'regPlano',
     };
     for (const [key, elId] of Object.entries(fields)) {
       const val = document.getElementById(elId).value;
-      if (val !== '') fd.append(key, val);
+      // terminales es numérico: FastAPI rechaza '' como int, así que si está
+      // vacío simplemente no se envía (el backend lo trata como "sin dato").
+      if (key === 'terminales' && val === '') continue;
+      if (val !== '' || isEdit) fd.append(key, val);
     }
 
-    const r = await fetch(`${API_BASE}/registrar`, { method: 'POST', body: fd });
+    const endpoint = isEdit ? '/editar_conector' : '/registrar';
+    const r = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', body: fd });
     if (!r.ok) {
       const err = await r.text();
       throw new Error(`HTTP ${r.status}: ${err}`);
     }
     const data = await r.json();
-    showToast(data.mensaje || `Conector #${data.id_conector} registrado`, 'success');
+    showToast(data.mensaje || `Conector #${data.id_conector} guardado`, 'success');
+    if (data.excel_sincronizado === false) {
+      showToast(data.excel_mensaje || 'No se pudo sincronizar con el Excel', 'info');
+    }
     closeRegisterModal();
+
+    if (isEdit) {
+      // Refrescar el detalle y la tarjeta en pantalla con los datos recién guardados
+      await refreshConnectorInView(editingId);
+    }
 
     // Refrescar contador de conectores y dropdowns de filtros
     try {
@@ -2519,11 +2642,43 @@ async function submitRegister() {
       }
     } catch (e) { /* no crítico */ }
   } catch (e) {
-    showToast('Error al registrar: ' + e.message, 'info');
+    showToast('Error al guardar: ' + e.message, 'info');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Guardar conector';
+    btn.textContent = idleLabel;
   }
+}
+
+async function refreshConnectorInView(id) {
+  try {
+    const r = await fetch(`${API_BASE}/by_id?q=${id}&include_similar=0`);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.match) return;
+    const m = data.match.meta || {};
+    const updated = {
+      id: String(id),
+      score: currentDetailConnector ? currentDetailConnector.score : null,
+      ref: m['Referencia FAE'] || m['Referencia Proveedor'] || '',
+      refFae: m['Referencia FAE'] || '',
+      refProveedor: m['Referencia Proveedor'] || '',
+      proveedor: m['Proveedor'] || '',
+      descripcion: m['Descripción'] || '',
+      forma: m['Formas'] || '',
+      pines: m['Terminales'] ? parseInt(m['Terminales']) : null,
+      tipoMH: m['Tipo (M/H)'] || '',
+      contra: m['Contraconector'] || '',
+      plano: m['Plano que contiene el contraconector'] || '',
+      colores: m['Colores'] || '',
+      caja: m['Caja'] || '',
+      refAcabado: m['Ref. Acabado'] || '',
+    };
+    // Actualizar la entrada correspondiente en currentResults, si está
+    const i = currentResults.findIndex(r => r.id === String(id));
+    if (i !== -1) currentResults[i] = updated;
+    renderResults();
+    if (selectedCard) openDetail(updated, selectedCard);
+  } catch (e) { /* no crítico */ }
 }
 
 let toastTimer;
