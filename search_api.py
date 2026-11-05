@@ -40,18 +40,11 @@ from PIL import Image
 import torch
 import open_clip
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-
-try:
-    import win32com.client as win32com_client
-    import pywintypes
-    EXCEL_COM_AVAILABLE = True
-except ImportError:
-    win32com_client = None
-    pywintypes = None
-    EXCEL_COM_AVAILABLE = False
 from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
+from xlsx_direct_writer import set_row_values as write_fields_to_excel
+from xlsx_direct_writer import add_foto_in_cell
 #from rembg import remove, new_session
 
 # --------------------------------------------------------------------------
@@ -199,113 +192,6 @@ def extract_foto_column_photos(excel_path: Path, sheet_name: str, foto_col_lette
     except Exception as e:
         print(f"  ! extract_foto_column_photos: {e}")
         return {}
-
-
-def write_fields_to_excel(
-    excel_path: Path,
-    sheet_name: str,
-    id_conector: int,
-    field_updates: dict,
-    create_if_missing: bool = False,
-) -> tuple[bool, str]:
-    """
-    Escribe cambios de campos en el Excel real para la fila de `id_conector`,
-    usando Excel vía COM (nunca openpyxl: este archivo usa "imagen en celda"
-    / richData en la columna Foto, que openpyxl destruye al volver a guardar).
-
-    Si `create_if_missing` es True y el ID no existe todavía, añade una fila
-    nueva al final de los datos (usado al registrar un conector nuevo).
-
-    Si Excel ya tiene el archivo abierto, reutiliza esa misma ventana en vez
-    de abrir una segunda copia (y no la cierra al terminar). Si no, lanza una
-    instancia oculta, la cierra al terminar.
-
-    Devuelve (ok, mensaje).
-    """
-    if not EXCEL_COM_AVAILABLE:
-        return False, "Automatización de Excel no disponible en este servidor"
-
-    excel_path_str = str(excel_path.resolve())
-    excel = None
-    wb = None
-    we_launched_excel = False
-    we_opened_wb = False
-
-    try:
-        try:
-            excel = win32com_client.GetActiveObject("Excel.Application")
-            for open_wb in excel.Workbooks:
-                if open_wb.FullName.lower() == excel_path_str.lower():
-                    wb = open_wb
-                    break
-        except Exception:
-            excel = None
-
-        if excel is None:
-            excel = win32com_client.gencache.EnsureDispatch("Excel.Application")
-            excel.Visible = False
-            we_launched_excel = True
-
-        if wb is None:
-            excel.DisplayAlerts = False
-            wb = excel.Workbooks.Open(excel_path_str)
-            we_opened_wb = True
-
-        ws = wb.Sheets(sheet_name)
-
-        headers = {}
-        for c in range(1, 25):
-            v = ws.Cells(1, c).Value
-            if v:
-                headers[str(v).strip()] = c
-
-        # Leer la columna de IDs de una sola vez (mucho más rápido que
-        # celda a celda, y evita depender del "used range" de Excel, que
-        # puede estar inflado por formato aplicado a filas vacías).
-        id_rows = ws.Range("A2:A3000").Value
-        target_row = None
-        for i, row_tuple in enumerate(id_rows):
-            v = row_tuple[0] if row_tuple else None
-            if v is None:
-                continue
-            try:
-                if int(v) == id_conector:
-                    target_row = i + 2
-                    break
-            except (ValueError, TypeError):
-                continue
-
-        if target_row is None:
-            if not create_if_missing:
-                return False, f"No se encontró el conector #{id_conector} en el Excel"
-            last_row = 1  # fila de cabecera
-            for i, row_tuple in enumerate(id_rows):
-                v = row_tuple[0] if row_tuple else None
-                if v is not None:
-                    last_row = i + 2
-            target_row = last_row + 1
-
-        for field_name, value in field_updates.items():
-            col = headers.get(field_name)
-            if col is None:
-                continue
-            ws.Cells(target_row, col).Value = value
-
-        wb.Save()
-        return True, "Excel actualizado"
-    except Exception as e:
-        return False, f"No se pudo actualizar el Excel: {e}"
-    finally:
-        if wb is not None and we_opened_wb:
-            try:
-                wb.Close(False)
-            except Exception:
-                pass
-        if excel is not None and we_launched_excel:
-            try:
-                excel.Quit()
-            except Exception:
-                pass
 
 
 def build_image_cache():
@@ -875,6 +761,18 @@ async def registrar_conector(
         EXCEL_FILE, SHEET_NAME, new_id, new_row, create_if_missing=True
     )
 
+    # 6) Añadir también la foto en la celda "Foto" del Excel (si la fila
+    #    se creó bien antes)
+    if excel_ok:
+        jpeg_buf = io.BytesIO()
+        pil.convert("RGB").save(jpeg_buf, format="JPEG", quality=90)
+        foto_ok, foto_msg = add_foto_in_cell(
+            EXCEL_FILE, SHEET_NAME, new_id, jpeg_buf.getvalue(), image_ext="jpeg"
+        )
+        if not foto_ok:
+            excel_ok = False
+            excel_msg = foto_msg
+
     mensaje = f"Conector #{new_id} registrado correctamente."
     if not excel_ok:
         mensaje += f" Aviso: no se pudo añadir al Excel ({excel_msg})."
@@ -907,7 +805,8 @@ async def editar_conector(
     """
     Edita un conector que ya existe en el catálogo: actualiza sus metadatos
     (y opcionalmente su foto) en caliente, y sincroniza los mismos cambios
-    en el Excel real (vía Excel COM, no openpyxl).
+    en el Excel real editando su XML interno directamente (sin Excel ni
+    openpyxl, ver xlsx_direct_writer.py).
     """
     meta = STATE["meta"]
     id_col = "ID - Conector catálogo"
@@ -977,6 +876,17 @@ async def editar_conector(
     excel_ok, excel_msg = write_fields_to_excel(
         EXCEL_FILE, SHEET_NAME, id_conector, excel_fields
     )
+
+    # 4) Si se subió una foto nueva, añadirla también a la celda "Foto"
+    if excel_ok and foto_actualizada:
+        jpeg_buf = io.BytesIO()
+        pil.convert("RGB").save(jpeg_buf, format="JPEG", quality=90)
+        foto_ok, foto_msg = add_foto_in_cell(
+            EXCEL_FILE, SHEET_NAME, id_conector, jpeg_buf.getvalue(), image_ext="jpeg"
+        )
+        if not foto_ok:
+            excel_ok = False
+            excel_msg = foto_msg
 
     mensaje = f"Conector #{id_conector} actualizado."
     if not excel_ok:
