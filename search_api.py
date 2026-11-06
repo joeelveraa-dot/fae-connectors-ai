@@ -27,6 +27,7 @@ Endpoints:
 
 from pathlib import Path
 from contextlib import asynccontextmanager
+import asyncio
 import io
 import base64
 import re
@@ -286,8 +287,13 @@ def build_image_cache():
     print(f"  total en cache: {len(list(IMG_CACHE_DIR.glob('*.png')))}")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+def _load_state_sync():
+    """Carga el modelo CLIP, los embeddings y el catálogo. Es lenta (descarga
+    pesos de HuggingFace la primera vez, lee el Excel, genera la caché de
+    imágenes), así que se ejecuta en un hilo aparte: si esto bloqueara el
+    arranque de FastAPI, la app entera dejaría de responder a cualquier
+    petición (incluido /health) hasta que terminase, y en un servidor cloud
+    con arranque en frío eso puede tardar minutos o colgarse del todo."""
     print("Cargando modelo CLIP ViT-B (shortlist)...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model_b, _, preprocess_b = open_clip.create_model_and_transforms(
@@ -352,11 +358,33 @@ async def lifespan(app: FastAPI):
         #rembg_session=rembg_session,
         has_rerank=(model_l is not None),
     )
+    STATE["ready"] = True
     modo = "B+L (re-ranking)" if model_l is not None else "B (rápido)"
     print(f"OK: {len(ids)} conectores cargados - modo: {modo} - device: {device}")
     print("OK: abre http://localhost:8000 en el navegador")
+
+
+async def _load_state_background():
+    try:
+        await asyncio.to_thread(_load_state_sync)
+    except Exception as e:
+        print(f"ERROR cargando el modelo/catálogo: {e}")
+        STATE["load_error"] = str(e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    STATE["ready"] = False
+    asyncio.create_task(_load_state_background())
     yield
     STATE.clear()
+
+
+def _require_ready():
+    if STATE.get("load_error"):
+        raise HTTPException(500, f"El módulo no pudo cargar: {STATE['load_error']}")
+    if not STATE.get("ready"):
+        raise HTTPException(503, "El modelo todavía se está cargando, inténtalo de nuevo en unos segundos")
 
 
 app = FastAPI(
@@ -505,6 +533,8 @@ def health():
         model_info = f"{MODEL_B_NAME} + {MODEL_L_NAME} (rerank top {RERANK_SHORTLIST})"
     return {
         "status": "ok",
+        "ready": bool(STATE.get("ready")),
+        "load_error": STATE.get("load_error"),
         "conectores": int(len(STATE.get("ids", []))),
         "device": STATE.get("device"),
         "model": model_info,
@@ -517,6 +547,7 @@ def health():
 @app.get("/filtros")
 def filtros():
     """Valores posibles para poblar dropdowns en el frontend."""
+    _require_ready()
     meta = STATE["meta"]
     return {
         "terminales": sorted(
@@ -546,6 +577,7 @@ def by_id(q: str, include_similar: int = 1, max_similar: int = 12):
     Búsqueda directa por ID de conector catálogo o Referencia FAE.
     No usa embeddings: consulta solo los metadatos.
     """
+    _require_ready()
     meta = STATE["meta"]
     q_str = (q or "").strip()
     if not q_str:
@@ -695,6 +727,7 @@ async def registrar_conector(
     calcula su embedding CLIP y añade una fila a los metadatos, en caliente
     (sin reiniciar el servidor), para que sea buscable inmediatamente.
     """
+    _require_ready()
     try:
         raw = await file.read()
         pil = Image.open(io.BytesIO(raw)).convert("RGB")
@@ -808,6 +841,7 @@ async def editar_conector(
     en el Excel real editando su XML interno directamente (sin Excel ni
     openpyxl, ver xlsx_direct_writer.py).
     """
+    _require_ready()
     meta = STATE["meta"]
     id_col = "ID - Conector catálogo"
     mask = meta[id_col] == id_conector
@@ -830,6 +864,10 @@ async def editar_conector(
     }
 
     # 1) Metadatos en memoria + pkl (solo columnas que existan en el esquema)
+    # None = el campo no se envió en absoluto -> no tocarlo. Solo una cadena
+    # vacía explícita ("") borra el valor; así una llamada que solo cambia
+    # un campo no arrasa el resto de la fila (nos pasó durante pruebas).
+    campo_valor = {k: v for k, v in campo_valor.items() if v is not None}
     for campo, valor in campo_valor.items():
         if campo in meta.columns:
             meta.at[idx, campo] = None if valor == "" else valor
@@ -912,6 +950,7 @@ async def search(
     rerank: int = Form(1),
     debug: int = Form(0),
 ):
+    _require_ready()
     # Quitar archivos vacíos que a veces manda el navegador cuando no hay foto
     files = [f for f in files if f.filename]
 

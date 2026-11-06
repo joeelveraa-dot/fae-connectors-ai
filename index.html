@@ -1654,9 +1654,13 @@ function toggleTheme() {
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────
-// Si sirves el HTML desde el mismo FastAPI (http://localhost:8000/),
-// API_BASE puede ser '' (relativo). Si lo abres como file://, pon la URL absoluta.
-const API_BASE = (location.protocol === 'file:') ? 'http://localhost:8000' : '';
+// Si la página se sirve en la raíz (p.ej. http://localhost:8000/), las
+// llamadas van a rutas absolutas normales. Si se sirve bajo un subcamino
+// (p.ej. dentro de FAE Copilot, en /conectores), las llamadas tienen que
+// llevar ese mismo prefijo. Si se abre como file://, URL absoluta de prueba.
+const API_BASE = (location.protocol === 'file:')
+  ? 'http://localhost:8000'
+  : (location.pathname === '/' ? '' : location.pathname.replace(/\/$/, ''));
 
 // ── STATE ─────────────────────────────────────────────────────────────
 let hasImage = false;
