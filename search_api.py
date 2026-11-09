@@ -404,14 +404,19 @@ async def lifespan(app: FastAPI):
     STATE.clear()
 
 
-def _sync_excel_to_sharepoint(excel_ok: bool, excel_msg: str):
+async def _sync_excel_to_sharepoint(excel_ok: bool, excel_msg: str):
     """Tras escribir en la copia local del Excel, si estamos en Azure (sin
     OneDrive montado) sube esa copia a SharePoint vía Graph para que el
-    cambio llegue al Excel real. No se llama si la escritura local ya falló."""
+    cambio llegue al Excel real. No se llama si la escritura local ya falló.
+
+    La subida (varios PUT de 10 MB) tarda bastante y es bloqueante; se lanza
+    en un hilo aparte para no congelar el bucle de eventos de FastAPI mientras
+    dura; si no, Gunicorn puede dar por "colgado" el proceso entero y matarlo
+    a mitad de una edición (nos pasó una vez: tiró toda la app para todos)."""
     if not (excel_ok and GRAPH_MODE and graph_excel.enabled()):
         return excel_ok, excel_msg
     try:
-        graph_excel.upload(EXCEL_FILE)
+        await asyncio.to_thread(graph_excel.upload, EXCEL_FILE)
     except Exception as e:
         return False, f"escrito en local, pero no se pudo subir a SharePoint: {e}"
     return excel_ok, excel_msg
@@ -826,9 +831,12 @@ async def registrar_conector(
     meta_updated.to_pickle(META_FILE)
     STATE["meta"] = meta_updated
 
-    # 5) Añadir la misma fila al Excel real (fila nueva al final)
-    excel_ok, excel_msg = write_fields_to_excel(
-        EXCEL_FILE, SHEET_NAME, new_id, new_row, create_if_missing=True
+    # 5) Añadir la misma fila al Excel real (fila nueva al final). En un
+    #    hilo aparte: la cirugía de XML sobre un xlsx de ~48 MB no es
+    #    instantánea y, si bloqueara el bucle de eventos, podría hacer que
+    #    Gunicorn diera por colgado el proceso.
+    excel_ok, excel_msg = await asyncio.to_thread(
+        write_fields_to_excel, EXCEL_FILE, SHEET_NAME, new_id, new_row, create_if_missing=True
     )
 
     # 6) Añadir también la foto en la celda "Foto" del Excel (si la fila
@@ -836,14 +844,14 @@ async def registrar_conector(
     if excel_ok:
         jpeg_buf = io.BytesIO()
         pil.convert("RGB").save(jpeg_buf, format="JPEG", quality=90)
-        foto_ok, foto_msg = add_foto_in_cell(
-            EXCEL_FILE, SHEET_NAME, new_id, jpeg_buf.getvalue(), image_ext="jpeg"
+        foto_ok, foto_msg = await asyncio.to_thread(
+            add_foto_in_cell, EXCEL_FILE, SHEET_NAME, new_id, jpeg_buf.getvalue(), image_ext="jpeg"
         )
         if not foto_ok:
             excel_ok = False
             excel_msg = foto_msg
 
-    excel_ok, excel_msg = _sync_excel_to_sharepoint(excel_ok, excel_msg)
+    excel_ok, excel_msg = await _sync_excel_to_sharepoint(excel_ok, excel_msg)
 
     mensaje = f"Conector #{new_id} registrado correctamente."
     if not excel_ok:
@@ -948,24 +956,25 @@ async def editar_conector(
         )
         foto_actualizada = True
 
-    # 3) Sincronizar los mismos cambios con el Excel real
+    # 3) Sincronizar los mismos cambios con el Excel real (hilo aparte, ver
+    #    comentario equivalente en /registrar)
     excel_fields = {k: (None if v == "" else v) for k, v in campo_valor.items()}
-    excel_ok, excel_msg = write_fields_to_excel(
-        EXCEL_FILE, SHEET_NAME, id_conector, excel_fields
+    excel_ok, excel_msg = await asyncio.to_thread(
+        write_fields_to_excel, EXCEL_FILE, SHEET_NAME, id_conector, excel_fields
     )
 
     # 4) Si se subió una foto nueva, añadirla también a la celda "Foto"
     if excel_ok and foto_actualizada:
         jpeg_buf = io.BytesIO()
         pil.convert("RGB").save(jpeg_buf, format="JPEG", quality=90)
-        foto_ok, foto_msg = add_foto_in_cell(
-            EXCEL_FILE, SHEET_NAME, id_conector, jpeg_buf.getvalue(), image_ext="jpeg"
+        foto_ok, foto_msg = await asyncio.to_thread(
+            add_foto_in_cell, EXCEL_FILE, SHEET_NAME, id_conector, jpeg_buf.getvalue(), image_ext="jpeg"
         )
         if not foto_ok:
             excel_ok = False
             excel_msg = foto_msg
 
-    excel_ok, excel_msg = _sync_excel_to_sharepoint(excel_ok, excel_msg)
+    excel_ok, excel_msg = await _sync_excel_to_sharepoint(excel_ok, excel_msg)
 
     mensaje = f"Conector #{id_conector} actualizado."
     if not excel_ok:
