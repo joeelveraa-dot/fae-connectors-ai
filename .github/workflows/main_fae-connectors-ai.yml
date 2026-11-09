@@ -18,6 +18,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Pre-descargar pesos del modelo CLIP
+        run: |
+          mkdir -p model_weights
+          curl -fL --retry 3 -o model_weights/open_clip_model.safetensors \
+            "https://huggingface.co/laion/CLIP-ViT-B-32-laion2B-s34B-b79K/resolve/main/open_clip_model.safetensors"
+
       - name: Create deployment package
         run: |
           zip -r release.zip . \

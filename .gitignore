@@ -2,6 +2,9 @@ __pycache__/
 .venv/
 .venv
 img_cache/
+# Pesos del modelo CLIP: los descarga el workflow de despliegue (ver
+# .github/workflows/main_fae-connectors-ai.yml), no se versionan (605 MB)
+model_weights/
 *.pt
 *.bin
 *.cache

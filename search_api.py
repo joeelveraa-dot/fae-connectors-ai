@@ -75,6 +75,15 @@ MODEL_B_PRETRAINED = "laion2b_s34b_b79k"
 MODEL_L_NAME = "ViT-L-14"
 MODEL_L_PRETRAINED = "laion2b_s32b_b82k"
 
+# En Azure la descarga de estos pesos desde HuggingFace puede ir muy lenta
+# (la red saliente del plan está limitada) y deja la carga del modelo
+# colgada indefinidamente. Para evitarlo, el workflow de despliegue baja el
+# fichero una vez (con el ancho de banda de GitHub Actions, no el de Azure)
+# y lo mete ya dentro del propio paquete; si existe, se usa directamente
+# sin tocar la red. En local, al no existir, se sigue usando el tag normal
+# (ya cacheado de antes).
+_LOCAL_MODEL_B_WEIGHTS = HERE / "model_weights" / "open_clip_model.safetensors"
+
 DEFAULT_TOP_K = 12
 RERANK_SHORTLIST = 30     # cuántos candidatos saca ViT-B para que re-rankee ViT-L
 
@@ -296,8 +305,11 @@ def _load_state_sync():
     con arranque en frío eso puede tardar minutos o colgarse del todo."""
     print("Cargando modelo CLIP ViT-B (shortlist)...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    pretrained_b = (
+        str(_LOCAL_MODEL_B_WEIGHTS) if _LOCAL_MODEL_B_WEIGHTS.exists() else MODEL_B_PRETRAINED
+    )
     model_b, _, preprocess_b = open_clip.create_model_and_transforms(
-        MODEL_B_NAME, pretrained=MODEL_B_PRETRAINED
+        MODEL_B_NAME, pretrained=pretrained_b
     )
     model_b = model_b.to(device).eval()
 
