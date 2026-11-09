@@ -28,8 +28,10 @@ Endpoints:
 from pathlib import Path
 from contextlib import asynccontextmanager
 import asyncio
+import hashlib
 import io
 import base64
+import os
 import re
 import shutil
 import zipfile
@@ -73,7 +75,23 @@ EXCEL_FILE = _EXCEL_ONEDRIVE if _EXCEL_ONEDRIVE.exists() else HERE / "catalogo_c
 GRAPH_MODE = not _EXCEL_ONEDRIVE.exists()
 SHEET_NAME = "Catálogo Conectores"
 INDEX_HTML = HERE / "index.html"
-IMG_CACHE_DIR = HERE / "img_cache"
+
+# En Azure, el propio paquete desplegado se extrae a una carpeta TEMPORAL
+# distinta en cada reinicio (no es que "HERE" persista entre arranques), así
+# que cualquier cosa bajo HERE se pierde al reiniciar: tanto la caché de
+# imágenes como las fotos de conectores registrados en caliente. Para que
+# sobrevivan a reinicios/despliegues, en Azure viven bajo /home, el único
+# directorio que Azure App Service persiste de verdad entre arranques.
+_BUNDLED_IMG_ORIG_DIR = HERE / "imagenes_originales"
+if GRAPH_MODE:
+    _PERSIST_DIR = Path(os.environ.get("HOME", "/home")) / "fae_conectores_persist"
+    IMG_CACHE_DIR = _PERSIST_DIR / "img_cache"
+    IMG_ORIG_DIR = _PERSIST_DIR / "imagenes_originales"
+else:
+    _PERSIST_DIR = HERE
+    IMG_CACHE_DIR = HERE / "img_cache"
+    IMG_ORIG_DIR = _BUNDLED_IMG_ORIG_DIR
+_EXCEL_HASH_MARKER = _PERSIST_DIR / "excel_hash_procesado.txt"
 
 MODEL_B_NAME = "ViT-B-32"
 MODEL_B_PRETRAINED = "laion2b_s34b_b79k"
@@ -98,7 +116,6 @@ RERANK_SHORTLIST = 30     # cuántos candidatos saca ViT-B para que re-rankee Vi
 # --------------------------------------------------------------------------
 STATE: dict = {}
 
-IMG_ORIG_DIR = HERE / "imagenes_originales"
 EXT_ORDER = [".png", ".jpg", ".jpeg", ".webp", ".bmp"]
 
 
@@ -209,17 +226,30 @@ def extract_foto_column_photos(excel_path: Path, sheet_name: str, foto_col_lette
         return {}
 
 
-def build_image_cache():
+def build_image_cache(excel_hash: str | None = None):
     """
     Cachea las imágenes que servirá /imagen/{id}.
     Prioridad: imagenes_originales/ (alta resolución) > columna "Foto" del
     Excel (foto real insertada en celda) > columna "Imagen" del Excel
     (dibujo técnico, último recurso).
     Guarda siempre como PNG en img_cache/{id}.png.
+
+    Reconstruir esto entero es lento (en Azure, minutos: lee todo
+    imagenes_originales/ y escanea el Excel completo buscando imágenes
+    incrustadas). Si `excel_hash` coincide con el de la última vez que se
+    completó esta función con éxito (guardado en excel_hash_procesado.txt,
+    en el mismo directorio persistente que img_cache), y ya hay algo en
+    caché, no hace falta rehacer nada: no ha cambiado ni el Excel ni el
+    propio código de esta función desde el último arranque.
     """
-    IMG_CACHE_DIR.mkdir(exist_ok=True)
+    IMG_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     existentes = {int(p.stem) for p in IMG_CACHE_DIR.glob("*.png") if p.stem.isdigit()}
     print(f"  cache previo: {len(existentes)} archivos")
+
+    if excel_hash and existentes and _EXCEL_HASH_MARKER.exists():
+        if _EXCEL_HASH_MARKER.read_text().strip() == excel_hash:
+            print("  el Excel no ha cambiado desde el último arranque; se reutiliza la caché tal cual")
+            return
 
     # Siempre sobrescribimos desde imagenes_originales/ (fuente más fiable).
     # Algunos archivos de esa carpeta son en realidad dibujos técnicos, no
@@ -300,6 +330,10 @@ def build_image_cache():
     print(f"  desde Excel (fallback): {n_fb}")
     print(f"  total en cache: {len(list(IMG_CACHE_DIR.glob('*.png')))}")
 
+    if excel_hash:
+        _EXCEL_HASH_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        _EXCEL_HASH_MARKER.write_text(excel_hash)
+
 
 def _load_state_sync():
     """Carga el modelo CLIP, los embeddings y el catálogo. Es lenta (descarga
@@ -308,12 +342,26 @@ def _load_state_sync():
     arranque de FastAPI, la app entera dejaría de responder a cualquier
     petición (incluido /health) hasta que terminase, y en un servidor cloud
     con arranque en frío eso puede tardar minutos o colgarse del todo."""
-    if GRAPH_MODE and graph_excel.enabled():
-        try:
-            print("Descargando el Excel real desde SharePoint (Graph)...")
-            graph_excel.download(EXCEL_FILE)
-        except Exception as e:
-            print(f"  ! No se pudo descargar el Excel vía Graph, se usa la copia local: {e}")
+    excel_hash = None
+    if GRAPH_MODE:
+        # imagenes_originales/ se pierde en cada reinicio (vive bajo HERE,
+        # que Azure recrea desde cero en cada arranque); se siembra una vez
+        # desde la copia desplegada con el repo a la carpeta persistente.
+        if not IMG_ORIG_DIR.exists() or not any(IMG_ORIG_DIR.iterdir()):
+            print(f"Sembrando imagenes_originales/ persistente desde {_BUNDLED_IMG_ORIG_DIR}...")
+            IMG_ORIG_DIR.mkdir(parents=True, exist_ok=True)
+            if _BUNDLED_IMG_ORIG_DIR.exists():
+                for src in _BUNDLED_IMG_ORIG_DIR.iterdir():
+                    shutil.copy2(src, IMG_ORIG_DIR / src.name)
+
+        if graph_excel.enabled():
+            try:
+                print("Descargando el Excel real desde SharePoint (Graph)...")
+                graph_excel.download(EXCEL_FILE)
+            except Exception as e:
+                print(f"  ! No se pudo descargar el Excel vía Graph, se usa la copia local: {e}")
+        if EXCEL_FILE.exists():
+            excel_hash = hashlib.sha256(EXCEL_FILE.read_bytes()).hexdigest()
 
     print("Cargando modelo CLIP ViT-B (shortlist)...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -363,7 +411,7 @@ def _load_state_sync():
     id_to_idx = {int(cid): i for i, cid in enumerate(ids)}
 
     print("Preparando cache de imágenes...")
-    build_image_cache()
+    build_image_cache(excel_hash)
 
     #print(f"Cargando modelo rembg ({REMBG_MODEL})...")
     #rembg_session = new_session(REMBG_MODEL)
