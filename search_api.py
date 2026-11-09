@@ -46,6 +46,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
 from xlsx_direct_writer import set_row_values as write_fields_to_excel
 from xlsx_direct_writer import add_foto_in_cell
+import graph_excel
 #from rembg import remove, new_session
 
 # --------------------------------------------------------------------------
@@ -66,6 +67,10 @@ _EXCEL_ONEDRIVE = Path(
     r"C:\Users\jnunezv\OneDrive - FRANCISCO ALBERO S.A.U\Documentos\catalogo_conectores_completo.xlsx"
 )
 EXCEL_FILE = _EXCEL_ONEDRIVE if _EXCEL_ONEDRIVE.exists() else HERE / "catalogo_conectores_completo.xlsx"
+# Fuera del PC de jnunezv (p.ej. en Azure) no hay OneDrive local montado, así
+# que el Excel real se trae y se sube por Microsoft Graph (ver graph_excel.py)
+# usando la misma copia local de siempre como intermediaria.
+GRAPH_MODE = not _EXCEL_ONEDRIVE.exists()
 SHEET_NAME = "Catálogo Conectores"
 INDEX_HTML = HERE / "index.html"
 IMG_CACHE_DIR = HERE / "img_cache"
@@ -303,6 +308,13 @@ def _load_state_sync():
     arranque de FastAPI, la app entera dejaría de responder a cualquier
     petición (incluido /health) hasta que terminase, y en un servidor cloud
     con arranque en frío eso puede tardar minutos o colgarse del todo."""
+    if GRAPH_MODE and graph_excel.enabled():
+        try:
+            print("Descargando el Excel real desde SharePoint (Graph)...")
+            graph_excel.download(EXCEL_FILE)
+        except Exception as e:
+            print(f"  ! No se pudo descargar el Excel vía Graph, se usa la copia local: {e}")
+
     print("Cargando modelo CLIP ViT-B (shortlist)...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     pretrained_b = (
@@ -390,6 +402,19 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(_load_state_background())
     yield
     STATE.clear()
+
+
+def _sync_excel_to_sharepoint(excel_ok: bool, excel_msg: str):
+    """Tras escribir en la copia local del Excel, si estamos en Azure (sin
+    OneDrive montado) sube esa copia a SharePoint vía Graph para que el
+    cambio llegue al Excel real. No se llama si la escritura local ya falló."""
+    if not (excel_ok and GRAPH_MODE and graph_excel.enabled()):
+        return excel_ok, excel_msg
+    try:
+        graph_excel.upload(EXCEL_FILE)
+    except Exception as e:
+        return False, f"escrito en local, pero no se pudo subir a SharePoint: {e}"
+    return excel_ok, excel_msg
 
 
 def _require_ready():
@@ -818,6 +843,8 @@ async def registrar_conector(
             excel_ok = False
             excel_msg = foto_msg
 
+    excel_ok, excel_msg = _sync_excel_to_sharepoint(excel_ok, excel_msg)
+
     mensaje = f"Conector #{new_id} registrado correctamente."
     if not excel_ok:
         mensaje += f" Aviso: no se pudo añadir al Excel ({excel_msg})."
@@ -937,6 +964,8 @@ async def editar_conector(
         if not foto_ok:
             excel_ok = False
             excel_msg = foto_msg
+
+    excel_ok, excel_msg = _sync_excel_to_sharepoint(excel_ok, excel_msg)
 
     mensaje = f"Conector #{id_conector} actualizado."
     if not excel_ok:

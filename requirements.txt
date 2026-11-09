@@ -17,3 +17,8 @@ openpyxl-image-loader>=1.0.5
 rembg>=2.0.50
 onnxruntime>=1.17.0
 aiofiles>=23.2.1
+
+# Sincronizar el Excel real con SharePoint vía Microsoft Graph cuando no hay
+# OneDrive local montado (ver graph_excel.py)
+msal>=1.28.0
+requests>=2.31.0
