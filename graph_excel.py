@@ -22,6 +22,9 @@ from pathlib import Path
 import requests
 from msal import ConfidentialClientApplication
 
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 5
+
 GRAPH_UPN = os.getenv("GRAPH_EXCEL_UPN", "j.nunez@fae.es")
 GRAPH_EXCEL_PATH = os.getenv(
     "GRAPH_EXCEL_PATH", "Documentos/catalogo_conectores_completo.xlsx"
@@ -68,11 +71,25 @@ def _token() -> str:
 
 
 def download(dest_path: Path) -> None:
-    """Descarga la última versión del Excel real a `dest_path` (sobrescribe)."""
+    """Descarga la última versión del Excel real a `dest_path` (sobrescribe).
+
+    La red saliente de Azure hacia Graph corta la conexión a media descarga
+    de vez en cuando (nos pasó: "Connection broken: IncompleteRead"), así
+    que se reintenta unas pocas veces antes de rendirse."""
     headers = {"Authorization": f"Bearer {_token()}"}
-    r = requests.get(_CONTENT_URL, headers=headers, timeout=60)
-    r.raise_for_status()
-    dest_path.write_bytes(r.content)
+    last_err = None
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        try:
+            r = requests.get(_CONTENT_URL, headers=headers, timeout=60)
+            r.raise_for_status()
+            dest_path.write_bytes(r.content)
+            return
+        except Exception as e:
+            last_err = e
+            if attempt < RETRY_ATTEMPTS:
+                print(f"  ! descarga de Graph falló (intento {attempt}/{RETRY_ATTEMPTS}): {e}")
+                time.sleep(RETRY_BACKOFF_SECONDS)
+    raise last_err
 
 
 def upload(src_path: Path) -> None:
@@ -97,5 +114,17 @@ def upload(src_path: Path) -> None:
             "Content-Length": str(len(chunk)),
             "Content-Range": f"bytes {start}-{end - 1}/{size}",
         }
-        resp = requests.put(upload_url, headers=chunk_headers, data=chunk, timeout=120)
-        resp.raise_for_status()
+        last_err = None
+        for attempt in range(1, RETRY_ATTEMPTS + 1):
+            try:
+                resp = requests.put(upload_url, headers=chunk_headers, data=chunk, timeout=120)
+                resp.raise_for_status()
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                if attempt < RETRY_ATTEMPTS:
+                    print(f"  ! subida de bloque a Graph falló (intento {attempt}/{RETRY_ATTEMPTS}): {e}")
+                    time.sleep(RETRY_BACKOFF_SECONDS)
+        if last_err:
+            raise last_err
