@@ -1,9 +1,16 @@
 """
 graph_excel.py
 ---------------
-Sincroniza el Excel real de conectores con SharePoint/OneDrive vía Microsoft
-Graph, para cuando la app corre fuera del PC de jnunezv (p.ej. en Azure) y no
-tiene montada la carpeta de OneDrive local.
+Sincroniza el Excel real de conectores con SharePoint vía Microsoft Graph,
+para cuando la app corre fuera del PC de jnunezv (p.ej. en Azure) y no tiene
+montada la carpeta local sincronizada.
+
+El Excel real vive en el sitio de SharePoint "GestorDocumentalIndustrial"
+(biblioteca "Interna", carpeta "Información Técnica/CONECTORES"), a petición
+del equipo (Sergio/Guillermo/Brisa/Mosquera/Jordi necesitan acceso de
+escritura ahí). Antes vivía en el OneDrive personal de j.nunez@fae.es; se
+migró el 2026-11-10 (ver commit de esa fecha) para que no dependa de una
+cuenta individual y sea visible para todo el equipo.
 
 Reutiliza la misma aplicación de Microsoft Entra ID ya registrada y con
 consentimiento de administrador concedido para copilot-fae (GRAPH_TENANT_ID /
@@ -18,6 +25,7 @@ modificada después de escribir.
 import os
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 from msal import ConfidentialClientApplication
@@ -25,18 +33,26 @@ from msal import ConfidentialClientApplication
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 5
 
-GRAPH_UPN = os.getenv("GRAPH_EXCEL_UPN", "j.nunez@fae.es")
-GRAPH_EXCEL_PATH = os.getenv(
-    "GRAPH_EXCEL_PATH", "Documentos/catalogo_conectores_completo.xlsx"
+# Id del drive (biblioteca "Interna" del sitio GestorDocumentalIndustrial).
+# Los ids de drive de SharePoint son estables aunque se renombre la carpeta,
+# así que no hace falta resolverlo en cada arranque vía /sites/.../drives.
+GRAPH_EXCEL_DRIVE_ID = os.getenv(
+    "GRAPH_EXCEL_DRIVE_ID",
+    "b!z4eDd8bauUSzBCxy2g4BIIbGeNJNrNBMhV0oJ6nhyQrLKasJ9TTHQb2q5paLKZev",
 )
+GRAPH_EXCEL_PATH = os.getenv(
+    "GRAPH_EXCEL_PATH",
+    "Información Técnica/CONECTORES/catalogo_conectores_completo.xlsx",
+)
+_GRAPH_EXCEL_PATH_Q = quote(GRAPH_EXCEL_PATH, safe="/")
 
 _CONTENT_URL = (
-    f"https://graph.microsoft.com/v1.0/users/{GRAPH_UPN}"
-    f"/drive/root:/{GRAPH_EXCEL_PATH}:/content"
+    f"https://graph.microsoft.com/v1.0/drives/{GRAPH_EXCEL_DRIVE_ID}"
+    f"/root:/{_GRAPH_EXCEL_PATH_Q}:/content"
 )
 _UPLOAD_SESSION_URL = (
-    f"https://graph.microsoft.com/v1.0/users/{GRAPH_UPN}"
-    f"/drive/root:/{GRAPH_EXCEL_PATH}:/createUploadSession"
+    f"https://graph.microsoft.com/v1.0/drives/{GRAPH_EXCEL_DRIVE_ID}"
+    f"/root:/{_GRAPH_EXCEL_PATH_Q}:/createUploadSession"
 )
 
 _CHUNK_SIZE = 10 * 1024 * 1024  # múltiplo de 320 KiB, recomendado por Graph
