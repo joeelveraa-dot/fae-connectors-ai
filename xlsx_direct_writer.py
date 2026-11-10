@@ -249,7 +249,14 @@ def set_row_values(
         if row_num is None:
             prev_row = last_data_row(sheet_xml)
             row_num = prev_row + 1
-            existing_cells: dict[str, dict] = {}
+            # Hereda el estilo (bordes, relleno...) de la fila anterior,
+            # celda a celda, para que una fila nueva no salga "en blanco"
+            # visualmente (pedido del equipo: ver mensaje de Sergio Pérez).
+            prev_span = _find_row_span(sheet_xml, prev_row)
+            prev_cells = _row_cells(sheet_xml[prev_span[0]:prev_span[1]], shared) if prev_span else {}
+            existing_cells: dict[str, dict] = {
+                col: {"style": c.get("style"), "value": None} for col, c in prev_cells.items()
+            }
             row_attrs = ' spans="1:17"'
             row_exists = False
             values = {**values}
