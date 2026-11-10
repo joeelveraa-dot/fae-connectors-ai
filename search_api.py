@@ -57,10 +57,10 @@ import graph_excel
 HERE = Path(__file__).parent
 # Compatibilidad hacia atrás: si existe embeddings_b.npz usamos ese.
 # Si no, usamos el antiguo embeddings.npz.
-EMBEDDINGS_B_FILE = HERE / "embeddings_b.npz"
+_BUNDLED_EMBEDDINGS_B_FILE = HERE / "embeddings_b.npz"
 EMBEDDINGS_L_FILE = HERE / "embeddings_l.npz"
-EMBEDDINGS_LEGACY = HERE / "embeddings.npz"
-META_FILE = HERE / "catalogo_meta.pkl"
+_BUNDLED_EMBEDDINGS_LEGACY = HERE / "embeddings.npz"
+_BUNDLED_META_FILE = HERE / "catalogo_meta.pkl"
 # El Excel "fuente de verdad" vive en la carpeta de OneDrive del usuario
 # (se sincroniza sola con SharePoint); así cualquier alta/edición desde la
 # app se sube automáticamente. Si esa ruta no existe (p.ej. otra máquina sin
@@ -87,10 +87,21 @@ if GRAPH_MODE:
     _PERSIST_DIR = Path(os.environ.get("HOME", "/home")) / "fae_conectores_persist"
     IMG_CACHE_DIR = _PERSIST_DIR / "img_cache"
     IMG_ORIG_DIR = _PERSIST_DIR / "imagenes_originales"
+    # catalogo_meta.pkl y embeddings_b.npz NO pueden vivir bajo HERE: cada
+    # alta/edición los reescribe (ver /registrar y /editar_conector), y si
+    # viven en la carpeta temporal que Azure recrea en cada reinicio, esos
+    # cambios se pierden en el siguiente arranque aunque el Excel real en
+    # SharePoint sí los tenga (nos pasó: un conector añadido por un
+    # compañero desapareció de la búsqueda tras el siguiente despliegue).
+    EMBEDDINGS_B_FILE = _PERSIST_DIR / "embeddings_b.npz"
+    META_FILE = _PERSIST_DIR / "catalogo_meta.pkl"
 else:
     _PERSIST_DIR = HERE
     IMG_CACHE_DIR = HERE / "img_cache"
     IMG_ORIG_DIR = _BUNDLED_IMG_ORIG_DIR
+    EMBEDDINGS_B_FILE = _BUNDLED_EMBEDDINGS_B_FILE
+    META_FILE = _BUNDLED_META_FILE
+EMBEDDINGS_LEGACY = _BUNDLED_EMBEDDINGS_LEGACY
 _EXCEL_HASH_MARKER = _PERSIST_DIR / "excel_hash_procesado.txt"
 
 MODEL_B_NAME = "ViT-B-32"
@@ -353,6 +364,21 @@ def _load_state_sync():
             if _BUNDLED_IMG_ORIG_DIR.exists():
                 for src in _BUNDLED_IMG_ORIG_DIR.iterdir():
                     shutil.copy2(src, IMG_ORIG_DIR / src.name)
+
+        # catalogo_meta.pkl / embeddings_b.npz: misma idea, se siembran una
+        # sola vez desde la copia del repo; a partir de ahí cada alta/edición
+        # los va actualizando ya en la carpeta persistente, así que sobreviven
+        # a reinicios y despliegues.
+        if not META_FILE.exists() and _BUNDLED_META_FILE.exists():
+            print(f"Sembrando {META_FILE.name} persistente desde {_BUNDLED_META_FILE}...")
+            META_FILE.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(_BUNDLED_META_FILE, META_FILE)
+        if not EMBEDDINGS_B_FILE.exists():
+            bundled_emb = _BUNDLED_EMBEDDINGS_B_FILE if _BUNDLED_EMBEDDINGS_B_FILE.exists() else _BUNDLED_EMBEDDINGS_LEGACY
+            if bundled_emb.exists():
+                print(f"Sembrando {EMBEDDINGS_B_FILE.name} persistente desde {bundled_emb}...")
+                EMBEDDINGS_B_FILE.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(bundled_emb, EMBEDDINGS_B_FILE)
 
         if graph_excel.enabled():
             try:
